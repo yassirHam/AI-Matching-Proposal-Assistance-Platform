@@ -1,5 +1,7 @@
-.venv/
+# created by virtualenv automatically
+env/
 .idea/
 __pycache__/
 *.log
 *.csv
+
