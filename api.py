@@ -1,15 +1,12 @@
-from flask import Flask, jsonify
+import os
 import psycopg2
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
 def get_db_connection():
-    return psycopg2.connect(
-        host="localhost",
-        user="postgres",
-        password="iryeli999",
-        database="job_db"
-    )
+    DATABASE_URL = os.getenv("postgresql://job_db_her2_user:Oy5zHIS9rVAbnpbJUUifhmf2cWFo5YZ1@dpg-cv16da9opnds73fev76g-a/job_db_her2L")
+    return psycopg2.connect(DATABASE_URL)
 
 @app.route("/")
 def home():
