@@ -1,13 +1,10 @@
-import os
-import psycopg2
 from flask import Flask, jsonify
+import psycopg2
 
 app = Flask(__name__)
 
 def get_db_connection():
-    DATABASE_URL = os.getenv("postgresql://job_db_her2_user:Oy5zHIS9rVAbnpbJUUifhmf2cWFo5YZ1@dpg-cv16da9opnds73fev76g-a/job_db_her2")
-    if not DATABASE_URL:
-        raise Exception("DATABASE_URL environment variable not set!")
+    DATABASE_URL = "postgresql://job_db_her2_user:Oy5zHIS9rVAbnpbJUUifhmf2cWFo5YZ1@dpg-cv16da9opnds73fev76g-a/job_db_her2"
     return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 @app.route("/")
