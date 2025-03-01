@@ -1,44 +1,50 @@
 from flask import Flask, jsonify
 import psycopg2
+import psycopg2.extras
 
 app = Flask(__name__)
 
+DATABASE_URL = "postgresql://job_db_her2_user:Oy5zHIS9rVAbnpbJUUifhmf2cWFo5YZ1@dpg-cv16da9opnds73fev76g-a/job_db_her2"
+
 def get_db_connection():
-    DATABASE_URL = "postgresql://job_db_her2_user:Oy5zHIS9rVAbnpbJUUifhmf2cWFo5YZ1@dpg-cv16da9opnds73fev76g-a/job_db_her2"
-    return psycopg2.connect(DATABASE_URL, sslmode="require")
-
-@app.route("/")
-def home():
-    return jsonify({"message": "Welcome to the Job API!"})
-
-@app.route("/jobs", methods=["GET"])
-def get_jobs():
     try:
-        print("Connecting to database...")  # Debugging
-        conn = get_db_connection()
-        print("Database connected!")  # Debugging
+        conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+        return conn
+    except Exception as e:
+        print(f"❌ Database connection error: {e}")
+        return None
 
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM job_offers")
-        jobs = cursor.fetchall()
+@app.route('/jobs', methods=['GET'])
+def get_jobs():
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
 
-        job_list = []
-        for job in jobs:
-            job_list.append({
-                "job_title": job[0],
-                "city": job[1],
-                "job_link": job[2],
-                "source": job[3]
-            })
+    try:
+        # Using DictCursor to access columns by name instead of index
+        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
+            cursor.execute("SELECT job_title, city, job_link, source FROM job_offers;")
+            jobs = cursor.fetchall()
 
-        cursor.close()
-        conn.close()
-        print("Returning job list...")  # Debugging
+            job_list = []
+            for job in jobs:
+                job_list.append({
+                    "job_title": job['job_title'],
+                    "city": job['city'],
+                    "job_link": job['job_link'],
+                    "source": job['source']
+                })
+
         return jsonify(job_list)
 
     except Exception as e:
-        print(f"Error fetching jobs: {e}")  # Debugging
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Error fetching jobs: {e}")
+        return jsonify({"error": "Failed to fetch jobs"}), 500
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    finally:
+        if conn:
+            conn.close()
+
+if __name__ == '__main__':
+    # Disable debug mode for production use
+    app.run(debug=False)
