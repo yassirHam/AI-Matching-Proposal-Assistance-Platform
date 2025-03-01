@@ -10,16 +10,12 @@ import time
 import csv
 import pandas as pd
 
-
-# Global settings for Chrome
 def create_driver(headless=True):
     options = Options()
     options.headless = headless
     service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=options)
 
-
-# Scraper for Anapec
 def scrape_anapec():
     driver = create_driver(headless=False)
     base_url = "https://anapec.ma/home-page-o1/chercheur-emploi/offres-demploi/"
@@ -79,8 +75,6 @@ def scrape_anapec():
         writer.writerows(all_jobs)
     print(f"✅ Scraped {len(all_jobs)} jobs from Anapec. Saved to anapec_jobs.csv!")
 
-
-# Scraper for Je-Recrute
 def scrape_je_recrute():
     driver = create_driver(headless=True)
     base_url = "https://www.je-recrute.com/category/maroc-job/"
@@ -141,25 +135,20 @@ def scrape_je_recrute():
     print(f"✅ Scraped {len(all_jobs)} jobs from Je-Recrute. Saved to je_recrute_jobs.csv!")
 
 
-# Data Cleaning Function
 def clean_data():
-    # Load scraped data
+
     df_anapec = pd.read_csv("anapec_jobs.csv")
     df_je_recrute = pd.read_csv("je_recrute_jobs.csv")
 
-    # Standardize job titles
     df_anapec["Job Title"] = df_anapec["Job Title"].str.title()
     df_je_recrute["Job Title"] = df_je_recrute["Job Title"].str.title()
 
-    # Standardize locations (for Anapec)
     if "Job Location" in df_anapec.columns:
         df_anapec["Job Location"] = df_anapec["Job Location"].str.title()
 
-    # Remove duplicates
     df_anapec.drop_duplicates(inplace=True)
     df_je_recrute.drop_duplicates(inplace=True)
 
-    # Fill missing values
     df_anapec.fillna("Not specified", inplace=True)
     df_je_recrute.fillna("Not specified", inplace=True)
 
@@ -169,8 +158,6 @@ def clean_data():
 
     print("✅ Data cleaned and saved!")
 
-
-# Main function to run all tasks
 def main():
     scrape_anapec()
     scrape_je_recrute()
