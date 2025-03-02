@@ -11,21 +11,15 @@ import csv
 import pandas as pd
 
 def create_driver(headless=True):
-    chrome_options = Options()
-    if headless:
-        chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-
-    service = Service("/usr/local/bin/chromedriver")
-    return webdriver.Chrome(service=service, options=chrome_options)
-
-def create_driver(headless=True):
     options = Options()
-    options.headless = headless
+    if headless:
+        options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=options)
+
 
 def scrape_anapec():
     driver = create_driver(headless=False)
