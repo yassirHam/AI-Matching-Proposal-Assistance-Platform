@@ -1,36 +1,31 @@
-from flask import Flask, jsonify
+import os
 import psycopg2
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-def get_db_connection():
-    DATABASE_URL = "postgresql://job_db_her2_user:Oy5zHIS9rVAbnpbJUUifhmf2cWFo5YZ1@dpg-cv16da9opnds73fev76g-a/job_db_her2"
-    return psycopg2.connect(DATABASE_URL, sslmode="require")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-@app.route("/")
-def home():
-    return jsonify({"message": "Welcome to the Job API!"})
+def get_db_connection():
+    if not DATABASE_URL:
+        raise Exception("DATABASE_URL is not set in the environment variables.")
+    return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 @app.route("/jobs", methods=["GET"])
 def get_jobs():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM job_offers")
-    jobs = cursor.fetchall()
-
-    job_list = []
-    for job in jobs:
-        job_list.append({
-            "job_title": job[0],
-            "city": job[1],
-            "job_link": job[2],
-            "source": job[3]
-        })
-
-    cursor.close()
-    conn.close()
-    return jsonify(job_list)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM job_offers")
+        jobs = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        job_list = [{"id": job[0], "job_title": job[1], "city": job[2], "job_link": job[3], "source": job[4]} for job in jobs]
+        return jsonify(job_list)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+

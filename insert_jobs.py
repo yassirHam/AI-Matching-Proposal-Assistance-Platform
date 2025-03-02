@@ -1,31 +1,56 @@
 import psycopg2
-import pandas as pd
+import csv
 
-# Use Render's database
-DATABASE_URL = "postgresql://job_db_her2_user:Oy5zHIS9rVAbnpbJUUifhmf2cWFo5YZ1@dpg-cv16da9opnds73fev76g-a/job_db_her2"
+DATABASE_URL = "postgresql://postgres:zOFKgEWJINuNBnzzLrdRwQTcbCZeYmCZ@crossover.proxy.rlwy.net:25810/railway"
 
-conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-cursor = conn.cursor()
+try:
+    conn = psycopg2.connect(DATABASE_URL)
+    cursor = conn.cursor()
+    print("✅ Connected successfully!")
 
-# Load CSV files
-df_anapec = pd.read_csv("C:\\Users\\yassi\\PycharmProjects\\WebScraping\\data\\clean_anapec_jobs.csv")
-df_je_recrute = pd.read_csv("C:\\Users\\yassi\\PycharmProjects\\WebScraping\\data\\clean_je_recrute_jobs.csv")
+    create_table_query = """
+    CREATE TABLE IF NOT EXISTS job_offers (
+        id SERIAL PRIMARY KEY,
+        job_title TEXT NOT NULL,
+        city TEXT NOT NULL,
+        job_link TEXT NOT NULL,
+        source TEXT NOT NULL
+    );
+    """
+    cursor.execute(create_table_query)
+    conn.commit()
+    print("✅ Table 'job_offers' is ready.")
 
-insert_query = """
-INSERT INTO job_offers (job_title, city, job_link, source)
-VALUES (%s, %s, %s, %s)
-"""
+    def insert_jobs_from_csv(csv_file_path, has_location):
+        """Insert job data from CSV into the database"""
+        with open(csv_file_path, mode="r", encoding="utf-8") as file:
+            reader = csv.reader(file)
+            next(reader)  # Skip header row
 
-# Insert Anapec jobs
-for _, row in df_anapec.iterrows():
-    cursor.execute(insert_query, (row["Job Title"], row["Job Location"], row["Job Link"], "Anapec"))
+            insert_query = "INSERT INTO job_offers (job_title, city, job_link, source) VALUES (%s, %s, %s, %s);"
+            job_data = []
 
-# Insert Je-Recrute jobs
-for _, row in df_je_recrute.iterrows():
-    cursor.execute(insert_query, (row["Job Title"], "Not specified", row["Job Link"], "Je-Recrute"))
+            for row in reader:
+                job_title = row[0]
+                job_link = row[1]
+                city = row[2] if has_location else "Unknown"  # Default to "Unknown" if city is missing
+                source = "CSV Import"
 
-conn.commit()
-cursor.close()
-conn.close()
+                job_data.append((job_title, city, job_link, source))
 
-print("✅ Job data successfully inserted into Render PostgreSQL!")
+            cursor.executemany(insert_query, job_data)
+            conn.commit()
+            print(f"✅ Inserted {len(job_data)} jobs from {csv_file_path}")
+
+    insert_jobs_from_csv("C:\\Users\\yassi\\PycharmProjects\\WebScraping\\data\\clean_je_recrute_jobs.csv", has_location=False)  # File with 2 columns
+    insert_jobs_from_csv("C:\\Users\\yassi\\PycharmProjects\\WebScraping\\data\\clean_anapec_jobs.csv", has_location=True)   # File with 3 columns
+
+except Exception as e:
+    print("❌ Error:", e)
+
+finally:
+    if 'cursor' in locals():
+        cursor.close()
+    if 'conn' in locals():
+        conn.close()
+    print("✅ Database connection closed.")
