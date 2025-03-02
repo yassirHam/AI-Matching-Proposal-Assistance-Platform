@@ -33,7 +33,7 @@ try:
             for row in reader:
                 job_title = row[0]
                 job_link = row[1]
-                city = row[2] if has_location else "Unknown"  # Default to "Unknown" if city is missing
+                city = row[2] if has_location else "Unknown"
                 source = "CSV Import"
 
                 job_data.append((job_title, city, job_link, source))

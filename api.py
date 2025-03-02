@@ -1,15 +1,18 @@
+
 import os
 import psycopg2
 from flask import Flask, jsonify
 
 app = Flask(__name__)
-
-DATABASE_URL = os.getenv("DATABASE_URL")
+# DATABASE_URL will be provided by Railway environment variables
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:zOFKgEWJINuNBnzzLrdRwQTcbCZeYmCZ@postgres.railway.internal:5432/railway")
 
 def get_db_connection():
-    if not DATABASE_URL:
-        raise Exception("DATABASE_URL is not set in the environment variables.")
-    return psycopg2.connect(DATABASE_URL, sslmode="require")
+    try:
+        return psycopg2.connect(DATABASE_URL, sslmode="require")
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        raise
 
 @app.route("/jobs", methods=["GET"])
 def get_jobs():
@@ -20,12 +23,14 @@ def get_jobs():
         jobs = cursor.fetchall()
         cursor.close()
         conn.close()
-        job_list = [{"id": job[0], "job_title": job[1], "city": job[2], "job_link": job[3], "source": job[4]} for job in jobs]
-        return jsonify(job_list)
+        return jsonify([
+            {"id": job[0], "job_title": job[1], "city": job[2], "job_link": job[3], "source": job[4]}
+            for job in jobs
+        ])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    from waitress import serve
-    serve(app, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
-
+    # Use gunicorn for production; Railway will override the port using the PORT env var.
+    from gunicorn.app.wsgiapp import run
+    run()
