@@ -6,16 +6,113 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
-import time
+import logging
 import csv
+from time import sleep
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Function to create a Selenium WebDriver
 def create_driver(headless=True):
     options = Options()
     if headless:
         options.add_argument("--headless")
-    service = Service(ChromeDriverManager().install())  # Automatically downloads the correct driver
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+    service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=options)
 
+# Function to scrape LinkedIn posts
+def scrape_linkedin_posts(driver, email, password):
+    logging.info("🔄 Logging into LinkedIn...")
+    login_url = "https://www.linkedin.com/login"
+    driver.get(login_url)
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
+
+    driver.find_element(By.ID, "username").send_keys(email)
+    driver.find_element(By.ID, "password").send_keys(password)
+    driver.find_element(By.ID, "password").submit()
+
+    sleep(5)
+    if "captcha" in driver.page_source.lower() or "challenge" in driver.current_url:
+        logging.warning("CAPTCHA or additional verification detected. Please solve it manually.")
+        input("Press Enter after solving the CAPTCHA...")
+
+    logging.info("🔄 Scraping LinkedIn posts...")
+    posts_url = "https://www.linkedin.com/company/stages-portal/posts/"
+    driver.get(posts_url)
+    sleep(5)
+
+    all_posts = []
+    current_page = 1
+
+    while True:
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "occludable-update"))
+            )
+        except Exception as e:
+            logging.error(f"❌ Failed to load posts: {e}")
+            break
+
+        html = driver.page_source
+        soup = BeautifulSoup(html, "html.parser")
+
+        posts = soup.find_all("div", class_="occludable-update")
+        if not posts:
+            logging.info("✅ No more posts found. Stopping...")
+            break
+
+        logging.info(f"✅ Found {len(posts)} posts on page {current_page}.")
+
+        for post in posts:
+            spans = post.find_all("span", dir="ltr")
+            post_text = " ".join(
+                span.get_text(separator=" ").strip() for span in spans if "Stages Portal" not in span.get_text()
+            )
+            post_link_tag = post.find("a", href=True)
+            post_link = post_link_tag["href"] if post_link_tag else "No Link"
+            if post_link and not post_link.startswith("http"):
+                post_link = f"https://www.linkedin.com{post_link}"
+
+            if post_text:
+                all_posts.append((post_text, post_link))
+                logging.info(f"📌 Extracted post: {post_text[:60]}... ➝ {post_link}")
+
+        try:
+            next_button = driver.find_element(By.CSS_SELECTOR, "button[aria-label='Next']")
+            if "disabled" in next_button.get_attribute("class"):
+                logging.info("✅ No more pages. Stopping...")
+                break
+            else:
+                next_button.click()
+                sleep(5)
+                current_page += 1
+        except Exception as e:
+            logging.info("✅ No more pages or 'Next' button not found. Trying infinite scroll...")
+            try:
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                sleep(3)
+                new_posts = driver.find_elements(By.CLASS_NAME, "occludable-update")
+                if len(new_posts) <= len(posts):
+                    logging.info("✅ No more posts loaded. Stopping...")
+                    break
+            except Exception as e:
+                logging.error(f"❌ Failed to scroll or load more posts: {e}")
+                break
+
+    with open("linkedin_posts.csv", "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["Post Text", "Post Link"])  # Write headers
+        writer.writerows(all_posts)
+
+    logging.info(f"✅ Scraped {len(all_posts)} LinkedIn posts. Saved to linkedin_posts.csv!")
+
+# Function to scrape Anapec jobs
 def scrape_anapec():
     driver = create_driver(headless=False)
     base_url = "https://anapec.ma/home-page-o1/chercheur-emploi/offres-demploi/"
@@ -25,14 +122,14 @@ def scrape_anapec():
     current_page = 1
 
     while True:
-        print(f"🔄 Scraping page {current_page}...")
+        logging.info(f"🔄 Scraping Anapec page {current_page}...")
 
         try:
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "offre"))
             )
         except:
-            print("❌ Job listings did not load. Stopping...")
+            logging.error("❌ Job listings did not load. Stopping...")
             break
 
         html = driver.page_source
@@ -40,10 +137,10 @@ def scrape_anapec():
 
         jobs = soup.find_all("div", class_="offre")
         if not jobs:
-            print("✅ No more job listings found. Stopping...")
+            logging.info("✅ No more job listings found. Stopping...")
             break
 
-        print(f"✅ Found {len(jobs)} job listings on page {current_page}.")
+        logging.info(f"✅ Found {len(jobs)} job listings on page {current_page}.")
 
         for job in jobs:
             link_tag = job.find("a", href=True)
@@ -58,20 +155,20 @@ def scrape_anapec():
             job_location = location_tag.text.strip() if location_tag else "No Location"
 
             all_jobs.append((job_title, job_link, job_location))
-            print(f"📌 {job_title} ➝ {job_link} - 📍 {job_location}")
+            logging.info(f"📌 {job_title} ➝ {job_link} - 📍 {job_location}")
 
-        next_page_link = soup.find("a", href=True, string="Suivant")  # ✅ Find "Next" button
+        next_page_link = soup.find("a", href=True, string="Suivant")  # Find "Next" button
         if not next_page_link:
             next_page_link = soup.find("a", href=lambda href: href and "?pg=" in href and f"?pg={current_page + 1}" in href)
 
         if next_page_link:
             next_page_url = f"https://anapec.ma{next_page_link['href']}"
-            print(f"➡ Moving to page {current_page + 1}: {next_page_url}")
+            logging.info(f"➡ Moving to page {current_page + 1}: {next_page_url}")
             driver.get(next_page_url)
-            time.sleep(3)
+            sleep(3)
             current_page += 1
         else:
-            print("✅ No more pages. Stopping...")
+            logging.info("✅ No more pages. Stopping...")
             break
 
     driver.quit()
@@ -81,8 +178,9 @@ def scrape_anapec():
         writer.writerow(["Job Title", "Job Link", "Job Location"])  # Write headers
         writer.writerows(all_jobs)
 
-    print(f"✅ Scraped {len(all_jobs)} jobs across multiple pages. Saved to anapec_jobs.csv!")
+    logging.info(f"✅ Scraped {len(all_jobs)} Anapec jobs. Saved to anapec_jobs.csv!")
 
+# Function to scrape JeRecrute jobs
 def scrape_je_recrute():
     driver = create_driver(headless=True)
     base_url = "https://www.je-recrute.com/category/maroc-job/"
@@ -90,13 +188,13 @@ def scrape_je_recrute():
     all_jobs = set()
 
     while True:
-        print(f"🔄 Scraping Je-Recrute: {driver.current_url}")
+        logging.info(f"🔄 Scraping Je-Recrute: {driver.current_url}")
         try:
             WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "td-module-title"))
             )
         except:
-            print("❌ Job listings did not load. Stopping...")
+            logging.error("❌ Job listings did not load. Stopping...")
             break
 
         html = driver.page_source
@@ -114,7 +212,7 @@ def scrape_je_recrute():
         next_link = soup.find("link", rel="next")
         if next_link and next_link.get("href"):
             driver.get(next_link["href"])
-            time.sleep(3)
+            sleep(3)
         else:
             break
 
@@ -123,8 +221,17 @@ def scrape_je_recrute():
         writer = csv.writer(file)
         writer.writerow(["Job Title", "Job Link"])
         writer.writerows(all_jobs)
-    print(f"✅ Scraped {len(all_jobs)} jobs from Je-Recrute. Saved to je_recrute_jobs.csv!")
+    logging.info(f"✅ Scraped {len(all_jobs)} JeRecrute jobs. Saved to je_recrute_jobs.csv!")
 
+# Main function to run all scrapers
 if __name__ == "__main__":
+    # Scrape LinkedIn posts
+    email_input = input("Enter your LinkedIn email: ")
+    password_input = input("Enter your LinkedIn password: ")
+    scrape_linkedin_posts(create_driver(headless=False), email_input, password_input)
+
+    # Scrape Anapec jobs
     scrape_anapec()
+
+    # Scrape JeRecrute jobs
     scrape_je_recrute()
