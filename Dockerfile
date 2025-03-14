@@ -24,4 +24,4 @@ RUN npm install
 COPY backend .
 
 # Start the application
-CMD ["python", "app.py"]
+CMD ["python", "data/api.py"]
