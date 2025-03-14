@@ -1,7 +1,7 @@
-
 import os
 import psycopg2
 from flask import Flask, jsonify
+from waitress import serve
 
 app = Flask(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:zOFKgEWJINuNBnzzLrdRwQTcbCZeYmCZ@postgres.railway.internal:5432/railway")
@@ -30,5 +30,4 @@ def get_jobs():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    from gunicorn.app.wsgiapp import run
-    run()
+    serve(app, host="0.0.0.0", port=8000)
