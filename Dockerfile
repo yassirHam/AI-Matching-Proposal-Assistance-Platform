@@ -3,6 +3,7 @@ LABEL authors="yassi"
 
 ENTRYPOINT ["top", "-b"]
 # Build frontend
+# Build frontend
 FROM node:16 as frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
@@ -13,12 +14,6 @@ RUN npm run build
 # Build backend
 FROM python:3.9-slim
 WORKDIR /app/backend
-
-# Install Node.js for frontend build (if needed)
-RUN apt-get update && apt-get install -y curl && \
-    curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g npm@latest
 
 # Copy backend dependencies
 COPY backend/requirements.txt ./
