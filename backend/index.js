@@ -6,13 +6,32 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { connectDB } from "./utils/db.js";
+import { Pool } from "pg";
 import userRoute from "./routes/user.routes.js";
 import companyRoute from "./routes/company.routes.js";
 import jobRoute from "./routes/job.routes.js";
 import applicationRoute from "./routes/application.routes.js";
 
 const app = express();
+
+// PostgreSQL connection setup
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Required for Railway's PostgreSQL
+  }
+});
+
+// Test database connection on startup
+pool.connect()
+  .then(client => {
+    console.log("🟢 Connected to PostgreSQL database");
+    client.release();
+  })
+  .catch(err => {
+    console.error("🔴 Database connection failed:", err);
+    process.exit(1);
+  });
 
 app.use(helmet());
 app.use(express.json({ limit: '10kb' }));
@@ -36,11 +55,13 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-connectDB().catch(err => {
-  console.error('Database connection failed:', err);
-  process.exit(1);
+// Database middleware - attach pool to requests
+app.use((req, res, next) => {
+  req.db = pool;
+  next();
 });
 
+// Registration validation middleware
 app.use('/api/v1/users', (req, res, next) => {
   if (req.path === '/register' && req.method === 'POST') {
     const requiredFields = ['fullname', 'email', 'phone_number', 'password', 'role'];
@@ -63,18 +84,30 @@ app.use('/api/v1/users', (req, res, next) => {
   next();
 });
 
+// Routes
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/companies", companyRoute);
 app.use("/api/v1/jobs", jobRoute);
 app.use("/api/v1/applications", applicationRoute);
 
-app.get('/api/v1/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString()
-  });
+// Health check endpoint
+app.get('/api/v1/health', async (req, res) => {
+  try {
+    await req.db.query('SELECT 1'); // Database health check
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      database: 'connected'
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      database: 'disconnected'
+    });
+  }
 });
 
+// Handle 404
 app.all('*', (req, res) => {
   res.status(404).json({
     status: 'fail',
@@ -82,33 +115,40 @@ app.all('*', (req, res) => {
   });
 });
 
+// Error handler
 app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
+  console.error('🚨 Global error handler:', err);
   res.status(500).json({
     success: false,
     error: process.env.NODE_ENV === 'development' ? err.message : 'Server Error',
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
+// Server setup
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });
 
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received: closing server');
+// Shutdown handlers
+const shutdown = async () => {
+  console.log('🔴 Closing database pool');
+  await pool.end();
   server.close(() => {
-    console.log('Server closed');
+    console.log('🛑 Server closed');
+    process.exit(0);
   });
-});
+};
 
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-  server.close(() => process.exit(1));
+  console.error('💥 Unhandled Rejection:', err);
+  shutdown();
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  server.close(() => process.exit(1));
+  console.error('💥 Uncaught Exception:', err);
+  shutdown();
 });
