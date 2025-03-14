@@ -1,4 +1,4 @@
-import { pool } from "../utils/db.js";
+import { query } from "../utils/db.js";
 import cloudinary from "../utils/cloudinary.js";
 
 export const registerCompany = async (req, res) => {

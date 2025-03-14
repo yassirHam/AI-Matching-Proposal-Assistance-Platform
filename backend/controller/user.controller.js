@@ -1,4 +1,4 @@
-import { pool } from "../utils/db.js";
+import { query } from "../utils/db.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cloudinary from "../utils/cloudinary.js";
