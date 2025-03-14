@@ -40,8 +40,7 @@ connectDB().catch(err => {
   console.error('Database connection failed:', err);
   process.exit(1);
 });
-app.use(express.json({ limit: '10kb' }));
- app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
 app.use('/api/v1/users', (req, res, next) => {
   if (req.path === '/register' && req.method === 'POST') {
     const requiredFields = ['fullname', 'email', 'phone_number', 'password', 'role'];
@@ -86,10 +85,10 @@ app.all('*', (req, res) => {
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
   res.status(500).json({
-  success: false,
-  error: process.env.NODE_ENV === 'development' ? error.message : 'Server Error',
-  stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-});
+    success: false,
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Server Error',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 const PORT = process.env.PORT || 3000;
