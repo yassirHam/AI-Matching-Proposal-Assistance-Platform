@@ -4,7 +4,7 @@ export const createJobOffer = async (jobData) => {
   const { job_title, city, job_link, source } = jobData;
 
   const query = `
-    INSERT INTO job_offers 
+    INSERT INTO job 
     (job_title, city, job_link, source)
     VALUES ($1, $2, $3, $4)
     RETURNING *;
@@ -21,7 +21,7 @@ export const createJobOffer = async (jobData) => {
 };
 
 export const getJobOffers = async () => {
-  const query = `SELECT * FROM job_offers;`;
+  const query = `SELECT * FROM job;`;
 
   try {
     const result = await pool.query(query);
@@ -32,7 +32,7 @@ export const getJobOffers = async () => {
 };
 
 export const getJobOfferById = async (jobId) => {
-  const query = `SELECT * FROM job_offers WHERE id = $1;`;
+  const query = `SELECT * FROM job WHERE id = $1;`;
 
   try {
     const result = await pool.query(query, [jobId]);
@@ -46,7 +46,7 @@ export const updateJobOffer = async (jobId, updates) => {
   const { job_title, city, job_link, source } = updates;
 
   const query = `
-    UPDATE job_offers
+    UPDATE job
     SET job_title = $1, city = $2, job_link = $3, source = $4
     WHERE id = $5
     RETURNING *;
@@ -63,7 +63,7 @@ export const updateJobOffer = async (jobId, updates) => {
 };
 
 export const deleteJobOffer = async (jobId) => {
-  const query = `DELETE FROM job_offers WHERE id = $1 RETURNING *;`;
+  const query = `DELETE FROM job WHERE id = $1 RETURNING *;`;
 
   try {
     const result = await pool.query(query, [jobId]);

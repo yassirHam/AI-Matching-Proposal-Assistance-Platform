@@ -9,7 +9,7 @@ try:
     print("✅ Connected successfully!")
 
     create_table_query = """
-    CREATE TABLE IF NOT EXISTS job_offers (
+    CREATE TABLE IF NOT EXISTS job (
         id SERIAL PRIMARY KEY,
         job_title TEXT NOT NULL,
         city TEXT NOT NULL,
@@ -19,7 +19,7 @@ try:
     """
     cursor.execute(create_table_query)
     conn.commit()
-    print("✅ Table 'job_offers' is ready.")
+    print("✅ Table 'job' is ready.")
 
     def insert_jobs_from_csv(csv_file_path, has_location):
         """Insert job data from CSV into the database"""
@@ -27,7 +27,7 @@ try:
             reader = csv.reader(file)
             next(reader)
 
-            insert_query = "INSERT INTO job_offers (job_title, city, job_link, source) VALUES (%s, %s, %s, %s);"
+            insert_query = "INSERT INTO job (job_title, city, job_link, source) VALUES (%s, %s, %s, %s);"
             job_data = []
 
             for row in reader:
@@ -47,7 +47,7 @@ try:
         with open(csv_file_path, mode="r", encoding="utf-8") as file:
             reader = csv.reader(file)
             next(reader)
-            insert_query = "INSERT INTO job_offers (job_title, city, job_link, source) VALUES (%s, %s, %s, %s);"
+            insert_query = "INSERT INTO job (job_title, city, job_link, source) VALUES (%s, %s, %s, %s);"
             post_data = []
 
             for row in reader:

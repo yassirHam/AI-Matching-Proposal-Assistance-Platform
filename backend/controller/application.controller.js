@@ -44,7 +44,7 @@ export const getAppliedJobs = async (req, res) => {
             SELECT a.*, j.job_title, j.city, j.job_link, j.source, 
                    c.name AS company_name, c.logo AS company_logo
             FROM applications a
-            JOIN job_offers j ON a.job_id = j.id
+            JOIN job j ON a.job_id = j.id
             LEFT JOIN companies c ON j.company_id = c.id
             WHERE a.applicant_id = $1
             ORDER BY a.created_at DESC

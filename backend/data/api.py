@@ -13,12 +13,12 @@ def get_db_connection():
         print(f"❌ Database connection failed: {e}")
         raise
 
-@app.route("/jobs", methods=["GET"])
+@app.route("/api/v1/jobs", methods=["GET"])
 def get_jobs():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM job_offers")
+        cursor.execute("SELECT * FROM job")
         jobs = cursor.fetchall()
         cursor.close()
         conn.close()
