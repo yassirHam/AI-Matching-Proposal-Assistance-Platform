@@ -1,12 +1,12 @@
-import React from 'react'
-import { Badge } from './ui/badge'
-import { useNavigate } from 'react-router-dom'
+import React from 'react';
+import { Badge } from './ui/badge';
+import { useNavigate } from 'react-router-dom';
 
 const LatestJobCards = ({ job }) => {
     const navigate = useNavigate();
-    
+
     return (
-        <div 
+        <div
             onClick={() => navigate(`/description/${job.id}`)}
             className='p-5 rounded-md shadow-xl bg-white border border-gray-100 cursor-pointer'
         >
@@ -26,7 +26,7 @@ const LatestJobCards = ({ job }) => {
                 </Badge>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default LatestJobCards
+export default LatestJobCards;

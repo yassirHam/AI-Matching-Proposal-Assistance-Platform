@@ -6,7 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import AdminJobsTable from './AdminJobsTable';
 import { setSearchJobByText } from '@/redux/jobSlice';
-import axios from 'axios'; // Assuming you're using axios for API calls
+import axios from 'axios';
+import { JOB_API_END_POINT } from '@/utils/constant';
 
 const AdminJobs = () => {
   const [input, setInput] = useState('');
@@ -20,14 +21,15 @@ const AdminJobs = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/job/admin', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
+      const response = await axios.get(`${JOB_API_END_POINT}/admin`, {
+        withCredentials: true
       });
-      setJobs(response.data.jobs);
+
+      if (response.data.success) {
+        setJobs(response.data.jobs);
+      }
     } catch (err) {
-      setError('Failed to fetch jobs. Please try again.');
+      setError(err.response?.data?.message || 'Failed to fetch jobs');
       console.error(err);
     } finally {
       setLoading(false);
@@ -55,11 +57,9 @@ const AdminJobs = () => {
           <Button onClick={() => navigate('/admin/jobs/create')}>New Job</Button>
         </div>
 
-        {/* Display loading or error messages */}
         {loading && <p>Loading jobs...</p>}
         {error && <p className="text-red-500">{error}</p>}
 
-        {/* Pass jobs data to the table */}
         <AdminJobsTable jobs={jobs} />
       </div>
     </div>

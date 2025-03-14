@@ -7,22 +7,26 @@ import { toast } from 'sonner';
 import { APPLICATION_API_END_POINT } from '@/utils/constant';
 import axios from 'axios';
 
-const shortlistingStatus = ["accepted", "rejected"];
+const statusOptions = ["pending", "accepted", "rejected"];
 
 const ApplicantsTable = () => {
     const { applicants } = useSelector(store => store.application);
 
-    const statusHandler = async (status, id) => {
-        console.log('called');
+    const handleStatusUpdate = async (status, id) => {
         try {
-            axios.defaults.withCredentials = true;
-            const res = await axios.patch(`${APPLICATION_API_END_POINT}/application/${id}/status`, { status });
-            console.log(res);
+            const res = await axios.patch(
+                `${APPLICATION_API_END_POINT}/${id}/status`,
+                { status },
+                { withCredentials: true }
+            );
+
             if (res.data.success) {
                 toast.success(res.data.message);
+                return true;
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || "An error occurred");
+            toast.error(error.response?.data?.message || "Update failed");
+            return false;
         }
     }
 
@@ -36,46 +40,61 @@ const ApplicantsTable = () => {
                         <TableHead>Email</TableHead>
                         <TableHead>Contact</TableHead>
                         <TableHead>Resume</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {
-                        applicants?.map((applicant) => (
-                            <TableRow key={applicant.id}>
-                                <TableCell>{applicant?.fullname}</TableCell>
-                                <TableCell>{applicant?.email}</TableCell>
-                                <TableCell>{applicant?.phone_number}</TableCell>
-                                <TableCell>
-                                    {
-                                        applicant?.resume ? <a className="text-blue-600 cursor-pointer" href={applicant.resume} target="_blank" rel="noopener noreferrer">{applicant.resume_original_name}</a> : <span>NA</span>
-                                    }
-                                </TableCell>
-                                <TableCell>{applicant?.created_at?.split("T")[0]}</TableCell>
-                                <TableCell className="text-right cursor-pointer">
-                                    <Popover>
-                                        <PopoverTrigger>
-                                            <MoreHorizontal />
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-32">
-                                            {
-                                                shortlistingStatus.map((status, index) => (
-                                                    <div onClick={() => statusHandler(status, applicant?.id)} key={index} className='flex w-fit items-center my-2 cursor-pointer'>
-                                                        <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
-                                                    </div>
-                                                ))
-                                            }
-                                        </PopoverContent>
-                                    </Popover>
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    }
+                    {applicants?.map((applicant) => (
+                        <TableRow key={applicant.id}>
+                            <TableCell>{applicant.fullname}</TableCell>
+                            <TableCell>{applicant.email}</TableCell>
+                            <TableCell>{applicant.phone_number || 'N/A'}</TableCell>
+                            <TableCell>
+                                {applicant.resume ? (
+                                    <a className="text-blue-600 hover:underline"
+                                       href={applicant.resume}
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        {applicant.resume_original_name}
+                                    </a>
+                                ) : 'N/A'}
+                            </TableCell>
+                            <TableCell className={`font-medium ${
+                                applicant.status === 'accepted' ? 'text-green-500' :
+                                applicant.status === 'rejected' ? 'text-red-500' : ''
+                            }`}>
+                                {applicant.status}
+                            </TableCell>
+                            <TableCell>{new Date(applicant.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right cursor-pointer">
+                                <Popover>
+                                    <PopoverTrigger>
+                                        <MoreHorizontal />
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-32">
+                                        {statusOptions.map((status) => (
+                                            <div
+                                                key={status}
+                                                onClick={() => handleStatusUpdate(status, applicant.id)}
+                                                className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                                    status === 'accepted' ? 'text-green-500' :
+                                                    status === 'rejected' ? 'text-red-500' : ''
+                                                }`}
+                                            >
+                                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                                            </div>
+                                        ))}
+                                    </PopoverContent>
+                                </Popover>
+                            </TableCell>
+                        </TableRow>
+                    ))}
                 </TableBody>
             </Table>
         </div>
     )
 }
 
-export default ApplicantsTable
+export default ApplicantsTable;

@@ -1,121 +1,207 @@
-import React, { useEffect, useState } from 'react'
-import Navbar from '../shared/Navbar'
-import { Button } from '../ui/button'
-import { ArrowLeft, Loader2 } from 'lucide-react'
-import { Label } from '../ui/label'
-import { Input } from '../ui/input'
-import axios from 'axios'
-import { COMPANY_API_END_POINT } from '@/utils/constant'
-import { useNavigate, useParams } from 'react-router-dom'
-import { toast } from 'sonner'
-import { useSelector } from 'react-redux'
-import useGetCompanyById from '@/hooks/useGetCompanyById'
+import React, { useEffect, useState } from 'react';
+import Navbar from '../shared/Navbar';
+import { Button } from '../ui/button';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import axios from 'axios';
+import { COMPANY_API_END_POINT } from '@/utils/constant';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useSelector } from 'react-redux';
 
 const CompanySetup = () => {
-    const params = useParams();
-    useGetCompanyById(params.id);
-    const [input, setInput] = useState({
-        name: "",
-        description: "",
-        website: "",
-        location: "",
-        file: null
+    const { id } = useParams();
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        website: '',
+        location: '',
+        logo: null
     });
-    const { singleCompany } = useSelector(store => store.company);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const { companies } = useSelector(store => store.company);
     const navigate = useNavigate();
 
-    const changeEventHandler = (e) => {
-        setInput({ ...input, [e.target.name]: e.target.value });
-    }
-
-    const changeFileHandler = (e) => {
-        const file = e.target.files?.[0] || null;
-        setInput({ ...input, file });
-    }
-
-    const submitHandler = async (e) => {
-        e.preventDefault();
-        const formData = new FormData();
-        formData.append("name", input.name);
-        formData.append("description", input.description);
-        formData.append("website", input.website);
-        formData.append("location", input.location);
-        if (input.file) {
-            formData.append("file", input.file);
-        }
-        try {
-            setLoading(true);
-            const res = await axios.put(`${COMPANY_API_END_POINT}/company/${params.id}`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                },
-                withCredentials: true
-            });
-            if (res.data.success) {
-                toast.success(res.data.message);
-                navigate("/admin/companies");
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to update company");
-        } finally {
-            setLoading(false);
-        }
-    }
-
     useEffect(() => {
-        setInput({
-            name: singleCompany?.name || "",
-            description: singleCompany?.description || "",
-            website: singleCompany?.website || "",
-            location: singleCompany?.location || "",
-            file: null
-        });
-    }, [singleCompany]);
+        const fetchCompany = async () => {
+            try {
+                const response = await axios.get(`${COMPANY_API_END_POINT}/${id}`, {
+                    withCredentials: true
+                });
+
+                if (!response.data.success) {
+                    throw new Error(response.data.message);
+                }
+
+                setFormData({
+                    name: response.data.company.name || '',
+                    description: response.data.company.description || '',
+                    website: response.data.company.website || '',
+                    location: response.data.company.location || '',
+                    logo: null
+                });
+            } catch (error) {
+                toast.error(error.response?.data?.message || 'Failed to load company');
+                navigate('/admin/companies');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCompany();
+    }, [id, navigate]);
+
+    const handleChange = (e) => {
+        setFormData(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value
+        }));
+    };
+
+    const handleFileChange = (e) => {
+        setFormData(prev => ({
+            ...prev,
+            logo: e.target.files?.[0] || null
+        }));
+    };
+
+    const validateForm = () => {
+        if (!formData.name.trim()) {
+            toast.error('Company name is required');
+            return false;
+        }
+        if (formData.description.length > 500) {
+            toast.error('Description must be less than 500 characters');
+            return false;
+        }
+        return true;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validateForm()) return;
+
+        setSubmitting(true);
+        try {
+            const formPayload = new FormData();
+            Object.entries(formData).forEach(([key, value]) => {
+                if (value !== null && value !== undefined) {
+                    formPayload.append(key, value);
+                }
+            });
+
+            const response = await axios.put(
+                `${COMPANY_API_END_POINT}/${id}`,
+                formPayload,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    },
+                    withCredentials: true
+                }
+            );
+
+            if (!response.data.success) {
+                throw new Error(response.data.message);
+            }
+
+            toast.success('Company updated successfully');
+            navigate('/admin/companies');
+        } catch (error) {
+            console.error('Update error:', error);
+            toast.error(error.response?.data?.message || 'Update failed');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (loading) return <div className="text-center p-4">Loading company data...</div>;
 
     return (
         <div>
             <Navbar />
-            <div className='max-w-xl mx-auto my-10'>
-                <form onSubmit={submitHandler}>
-                    <div className='flex items-center gap-5 p-8'>
-                        <Button onClick={() => navigate("/admin/companies")} variant="outline" className="flex items-center gap-2 text-gray-500 font-semibold">
-                            <ArrowLeft />
-                            <span>Back</span>
+            <div className='max-w-2xl mx-auto my-10'>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className='flex items-center gap-4 mb-8'>
+                        <Button
+                            variant="outline"
+                            onClick={() => navigate("/admin/companies")}
+                            disabled={submitting}
+                        >
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back
                         </Button>
-                        <h1 className='font-bold text-xl'>Company Setup</h1>
+                        <h1 className='text-2xl font-bold'>Company Setup</h1>
                     </div>
-                    <div className='grid grid-cols-2 gap-4'>
+
+                    <div className="grid gap-4">
                         <div>
-                            <Label>Company Name</Label>
-                            <Input type="text" name="name" value={input.name} onChange={changeEventHandler} />
+                            <Label>Company Name *</Label>
+                            <Input
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                disabled={submitting}
+                            />
                         </div>
+
                         <div>
                             <Label>Description</Label>
-                            <Input type="text" name="description" value={input.description} onChange={changeEventHandler} />
+                            <Input
+                                name="description"
+                                value={formData.description}
+                                onChange={handleChange}
+                                disabled={submitting}
+                            />
                         </div>
+
                         <div>
                             <Label>Website</Label>
-                            <Input type="text" name="website" value={input.website} onChange={changeEventHandler} />
+                            <Input
+                                name="website"
+                                value={formData.website}
+                                onChange={handleChange}
+                                disabled={submitting}
+                            />
                         </div>
+
                         <div>
                             <Label>Location</Label>
-                            <Input type="text" name="location" value={input.location} onChange={changeEventHandler} />
+                            <Input
+                                name="location"
+                                value={formData.location}
+                                onChange={handleChange}
+                                disabled={submitting}
+                            />
                         </div>
+
                         <div>
                             <Label>Logo</Label>
-                            <Input type="file" accept="image/*" onChange={changeFileHandler} />
+                            <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                disabled={submitting}
+                            />
                         </div>
                     </div>
-                    {loading ? (
-                        <Button className="w-full my-4"> <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Please wait </Button>
-                    ) : (
-                        <Button type="submit" className="w-full my-4">Update</Button>
-                    )}
+
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={submitting}
+                    >
+                        {submitting ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        {submitting ? 'Updating...' : 'Update Company'}
+                    </Button>
                 </form>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default CompanySetup
+export default CompanySetup;

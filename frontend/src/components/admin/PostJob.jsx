@@ -1,113 +1,173 @@
-import React, { useState } from 'react'
-import Navbar from '../shared/Navbar'
-import { Label } from '../ui/label'
-import { Input } from '../ui/input'
-import { Button } from '../ui/button'
-import { useSelector } from 'react-redux'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import axios from 'axios'
-import { JOB_API_END_POINT } from '@/utils/constant'
-import { toast } from 'sonner'
-import { useNavigate } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import React, { useState } from 'react';
+import Navbar from '../shared/Navbar';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { useSelector } from 'react-redux';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import axios from 'axios';
+import { JOB_API_END_POINT } from '@/utils/constant';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 
 const PostJob = () => {
-    const [input, setInput] = useState({
-       job_title:"",
-        city:"",
-        job_link:"",
-        source:""
+    const [formData, setFormData] = useState({
+        job_title: '',
+        city: '',
+        job_link: '',
+        source: '',
+        company_id: ''
     });
-    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const { companies } = useSelector(store => store.company);
     const navigate = useNavigate();
 
-    const { companies } = useSelector(store => store.company);
+    const validateForm = () => {
+        const requiredFields = ['job_title', 'city', 'job_link', 'company_id'];
+        const missingFields = requiredFields.filter(field => !formData[field].trim());
 
-    const changeEventHandler = (e) => {
-        setInput({ ...input, [e.target.name]: e.target.value });
-    };
-
-    const selectChangeHandler = (value) => {
-        const selectedCompany = companies.find(company => company.id === value);
-        setInput({ ...input, companyId: selectedCompany?.id || "" });
-    };
-
-    const submitHandler = async (e) => {
-        e.preventDefault();
-        if (!input.companyId) {
-            toast.error("Please select a company before posting a job");
-            return;
+        if (missingFields.length > 0) {
+            toast.error(`Missing required fields: ${missingFields.join(', ')}`);
+            return false;
         }
+
+        if (!isValidUrl(formData.job_link)) {
+            toast.error('Please enter a valid URL for the job link');
+            return false;
+        }
+
+        return true;
+    };
+
+    const isValidUrl = (url) => {
         try {
-            setLoading(true);
-            const res = await axios.post(`${JOB_API_END_POINT}/job/post`, input, {
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                withCredentials: true
-            });
-            if (res.data.success) {
-                toast.success(res.data.message);
-                navigate("/admin/jobs");
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Failed to post job");
-        } finally {
-            setLoading(false);
+            new URL(url);
+            return true;
+        } catch {
+            return false;
         }
-    }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validateForm()) return;
+
+        setSubmitting(true);
+        try {
+            const response = await axios.post(
+                JOB_API_END_POINT,
+                formData,
+                {
+                    withCredentials: true,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (!response.data.success) {
+                throw new Error(response.data.message);
+            }
+
+            toast.success('Job posted successfully');
+            navigate('/admin/jobs');
+        } catch (error) {
+            console.error('Posting error:', error);
+            toast.error(error.response?.data?.message || 'Job posting failed');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <div>
             <Navbar />
-            <div className='flex items-center justify-center w-screen my-5'>
-                <form onSubmit={submitHandler} className='p-8 max-w-4xl border border-gray-200 shadow-lg rounded-md'>
-                    <div className='grid grid-cols-2 gap-2'>
-                        {Object.keys(input).map((key) => (
-                            key !== "companyId" && (
-                                <div key={key}>
-                                    <Label>{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
-                                    <Input
-                                        type={key === "position" ? "number" : "text"}
-                                        name={key}
-                                        value={input[key]}
-                                        onChange={changeEventHandler}
-                                        className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                                    />
-                                </div>
-                            )
-                        ))}
-                        {
-                            companies.length > 0 && (
-                                <Select onValueChange={selectChangeHandler}>
-                                    <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Select a Company" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            {
-                                                companies.map((company) => (
-                                                    <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
-                                                ))
-                                            }
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                            )
-                        }
+            <div className="max-w-2xl mx-auto my-8 p-6 bg-white rounded-lg shadow-md">
+                <h1 className="text-2xl font-bold mb-6">Post New Job</h1>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Job Title *</Label>
+                        <Input
+                            name="job_title"
+                            value={formData.job_title}
+                            onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                            disabled={submitting}
+                        />
                     </div>
-                    {loading ? (
-                        <Button className="w-full my-4"> <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Please wait </Button>
-                    ) : (
-                        <Button type="submit" className="w-full my-4">Post New Job</Button>
-                    )}
-                    {
-                        companies.length === 0 && <p className='text-xs text-red-600 font-bold text-center my-3'>*Please register a company first, before posting a job</p>
-                    }
+
+                    <div className="space-y-2">
+                        <Label>City *</Label>
+                        <Input
+                            name="city"
+                            value={formData.city}
+                            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                            disabled={submitting}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Job Link *</Label>
+                        <Input
+                            name="job_link"
+                            value={formData.job_link}
+                            onChange={(e) => setFormData({ ...formData, job_link: e.target.value })}
+                            disabled={submitting}
+                            placeholder="https://example.com/job"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Source</Label>
+                        <Input
+                            name="source"
+                            value={formData.source}
+                            onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                            disabled={submitting}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Company *</Label>
+                        <Select
+                            onValueChange={(value) => setFormData({ ...formData, company_id: value })}
+                            disabled={submitting || companies.length === 0}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a company" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    {companies.map(company => (
+                                        <SelectItem key={company.id} value={company.id.toString()}>
+                                            {company.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                        {companies.length === 0 && (
+                            <p className="text-sm text-red-600 mt-1">
+                                No companies available. Please create a company first.
+                            </p>
+                        )}
+                    </div>
+
+                    <Button
+                        type="submit"
+                        className="w-full mt-6"
+                        disabled={submitting || companies.length === 0}
+                    >
+                        {submitting ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        {submitting ? 'Posting...' : 'Post Job'}
+                    </Button>
                 </form>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default PostJob
+export default PostJob;

@@ -15,15 +15,13 @@ import applicationRoute from "./routes/application.routes.js";
 
 const app = express();
 
-// PostgreSQL connection setup
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Required for Railway's PostgreSQL
+    rejectUnauthorized: false
   }
 });
 
-// Test database connection on startup
 pool.connect()
   .then(client => {
     console.log("🟢 Connected to PostgreSQL database");
@@ -56,13 +54,11 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Database middleware - attach pool to requests
 app.use((req, res, next) => {
   req.db = pool;
   next();
 });
 
-// Registration validation middleware
 app.use('/api/v1/users', (req, res, next) => {
   if (req.path === '/register' && req.method === 'POST') {
     const requiredFields = ['fullname', 'email', 'phone_number', 'password', 'role'];

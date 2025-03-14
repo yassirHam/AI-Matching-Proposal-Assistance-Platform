@@ -10,46 +10,28 @@ const Browse = () => {
     const dispatch = useDispatch();
 
     useEffect(() => {
-        return () => {
-            dispatch(setSearchedQuery(""));
-        };
+        return () => dispatch(setSearchedQuery(""));
     }, [dispatch]);
 
-    if (isLoading) {
-        return (
-            <div>
-                <Navbar />
-                <div className="max-w-7xl mx-auto my-10">
-                    <h1 className="font-bold text-xl my-10">Loading jobs...</h1>
-                </div>
+    if (isLoading) return (
+        <div>
+            <Navbar />
+            <div className="max-w-7xl mx-auto my-10">
+                <h1 className="font-bold text-xl my-10">Loading jobs...</h1>
             </div>
-        );
-    }
+        </div>
+    );
 
-    // Display error state
-    if (error) {
-        return (
-            <div>
-                <Navbar />
-                <div className="max-w-7xl mx-auto my-10">
-                    <h1 className="font-bold text-xl my-10 text-red-500">
-                        Error: {error.message || "Failed to fetch jobs"}
-                    </h1>
-                </div>
+    if (error) return (
+        <div>
+            <Navbar />
+            <div className="max-w-7xl mx-auto my-10">
+                <h1 className="font-bold text-xl my-10 text-red-500">
+                    Error: {error.message || "Failed to fetch jobs"}
+                </h1>
             </div>
-        );
-    }
-
-    if (allJobs.length === 0) {
-        return (
-            <div>
-                <Navbar />
-                <div className="max-w-7xl mx-auto my-10">
-                    <h1 className="font-bold text-xl my-10">No jobs found.</h1>
-                </div>
-            </div>
-        );
-    }
+        </div>
+    );
 
     return (
         <div>
@@ -59,19 +41,8 @@ const Browse = () => {
                     Search Results ({allJobs.length})
                 </h1>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {allJobs.map((job) => (
-                        <Job
-                            key={job.id} // Use job.id from the backend
-                            job={{
-                                id: job.id,
-                                title: job.job_title,
-                                location: job.city,
-                                company: job.company_name,
-                                logo: job.company_logo,
-                                link: job.job_link,
-                                source: job.source,
-                            }}
-                        />
+                    {allJobs.map(job => (
+                        <Job key={job.id} job={job} />
                     ))}
                 </div>
             </div>

@@ -8,9 +8,8 @@ import { Button } from './ui/button'; // Assuming you have a Button component fo
 const AppliedJobTable = () => {
     const { allAppliedJobs } = useSelector(store => store.job);
     const [currentPage, setCurrentPage] = useState(1);
-    const [jobsPerPage] = useState(5); // Number of jobs to display per page
+    const [jobsPerPage] = useState(5);
 
-    // Function to determine badge color based on status
     const getBadgeColor = (status) => {
         switch (status) {
             case 'rejected':

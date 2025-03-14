@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import { Badge } from './ui/badge'
-import { Button } from './ui/button'
+import React, { useEffect, useState } from 'react';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { APPLICATION_API_END_POINT, JOB_API_END_POINT } from '@/utils/constant';
@@ -12,102 +12,97 @@ import { format } from 'date-fns';
 const JobDescription = () => {
     const { singleJob } = useSelector(store => store.job);
     const { user } = useSelector(store => store.auth);
-    const isInitiallyApplied = singleJob?.applications?.some(application => application.applicant_id === user?.id) || false;
-    const [isApplied, setIsApplied] = useState(isInitiallyApplied);
-
-    const params = useParams();
-    const jobId = params.id;
+    const { id } = useParams();
     const dispatch = useDispatch();
+    const [isApplied, setIsApplied] = useState(false);
 
     const applyJobHandler = async () => {
         try {
-            const res = await axios.get(`${APPLICATION_API_END_POINT}/apply/${jobId}`, { withCredentials: true });
+            const res = await axios.post(
+                `${APPLICATION_API_END_POINT}/application/${id}`,
+                null,
+                { withCredentials: true }
+            );
 
             if (res.data.success) {
                 setIsApplied(true);
-                const updatedSingleJob = { 
-                    ...singleJob, 
-                    applications: [...singleJob.applications, { applicant_id: user?.id }]
-                };
-                dispatch(setSingleJob(updatedSingleJob));
+                dispatch(setSingleJob({
+                    ...singleJob,
+                    applications: [...singleJob.applications, res.data.application]
+                }));
                 toast.success(res.data.message);
             }
         } catch (error) {
-            console.log(error);
             toast.error(error.response?.data?.message || 'Application failed');
         }
-    }
+    };
 
     useEffect(() => {
         const fetchSingleJob = async () => {
             try {
-                const res = await axios.get(`${JOB_API_END_POINT}/get/${jobId}`, { withCredentials: true });
-                if (res.data.success) {
-                    dispatch(setSingleJob(res.data.job));
-                    setIsApplied(res.data.job.applications?.some(application => application.applicant_id === user?.id));
+                const { data } = await axios.get(
+                    `${JOB_API_END_POINT}/get/${id}`,
+                    { withCredentials: true }
+                );
+                if (data.success) {
+                    dispatch(setSingleJob(data.job));
+                    setIsApplied(data.job.applications?.some(
+                        app => app.applicant_id === user?.id
+                    ));
                 }
             } catch (error) {
-                console.log(error);
+                toast.error('Failed to load job details');
             }
-        }
+        };
         fetchSingleJob();
-    }, [jobId, dispatch, user?.id]);
+    }, [id, dispatch, user?.id]);
 
     return (
-        <div className='max-w-7xl mx-auto my-10'>
-            <div className='flex items-center justify-between'>
-                <div>
-                    <h1 className='font-bold text-xl'>{singleJob?.job_title}</h1>
-                    <div className='flex items-center gap-2 mt-4'>
-                        <Badge className='text-blue-700 font-bold' variant="ghost">
+        <div className='max-w-7xl mx-auto my-10 px-4'>
+            <div className='flex flex-col md:flex-row items-start justify-between gap-4'>
+                <div className='flex-1'>
+                    <h1 className='font-bold text-2xl'>{singleJob?.job_title}</h1>
+                    <div className='flex flex-wrap gap-2 mt-4'>
+                        <Badge variant="outline" className="text-blue-600">
                             {singleJob?.city}
                         </Badge>
-                        <Badge className='text-[#7209b7] font-bold' variant="ghost">
+                        <Badge variant="outline" className="text-[#7209b7]">
                             {singleJob?.source}
                         </Badge>
                     </div>
                 </div>
                 <Button
-                    onClick={isApplied ? null : applyJobHandler}
+                    onClick={applyJobHandler}
                     disabled={isApplied}
-                    className={`rounded-lg ${isApplied ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#7209b7] hover:bg-[#5f32ad]'}`}
+                    className={`md:w-auto w-full ${isApplied ? 'bg-gray-500' : 'bg-[#7209b7]'}`}
                 >
-                    {isApplied ? 'Already Applied' : 'Apply Now'}
+                    {isApplied ? 'Applied ✓' : 'Apply Now'}
                 </Button>
             </div>
-            
-            <h1 className='border-b-2 border-b-gray-300 font-medium py-4'>Job Details</h1>
-            <div className='my-4 space-y-2'>
-                <div className='flex items-center'>
-                    <h1 className='font-bold min-w-[120px]'>Position:</h1>
-                    <span className='ml-4 text-gray-800'>{singleJob?.job_title}</span>
-                </div>
-                <div className='flex items-center'>
-                    <h1 className='font-bold min-w-[120px]'>Location:</h1>
-                    <span className='ml-4 text-gray-800'>{singleJob?.city}</span>
-                </div>
-                <div className='flex items-center'>
-                    <h1 className='font-bold min-w-[120px]'>Posted On:</h1>
-                    <span className='ml-4 text-gray-800'>
-                        {format(new Date(singleJob?.created_at), 'MMM dd, yyyy')}
-                    </span>
-                </div>
-                <div className='flex items-center'>
-                    <h1 className='font-bold min-w-[120px]'>Source:</h1>
-                    <span className='ml-4 text-gray-800'>{singleJob?.source}</span>
-                </div>
-                <div className='flex items-center'>
-                    <h1 className='font-bold min-w-[120px]'>Applicants:</h1>
-                    <span className='ml-4 text-gray-800'>{singleJob?.applications?.length || 0}</span>
-                </div>
-            </div>
 
-            <h1 className='border-b-2 border-b-gray-300 font-medium py-4'>Job Description</h1>
-            <div className='my-4'>
-                <p className='text-gray-800'>{singleJob?.description}</p>
+            <div className='mt-8 space-y-6'>
+                <div className='space-y-2'>
+                    <h2 className='text-xl font-semibold border-b pb-2'>Job Details</h2>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        <DetailItem label="Position" value={singleJob?.job_title} />
+                        <DetailItem label="Location" value={singleJob?.city} />
+                        <DetailItem
+                            label="Posted On"
+                            value={format(new Date(singleJob?.created_at), 'MMM dd, yyyy')}
+                        />
+                        <DetailItem label="Applicants" value={singleJob?.applications?.length} />
+                    </div>
+                </div>
             </div>
         </div>
-    )
-}
+    );
+};
+
+const DetailItem = ({ label, value }) => (
+    <div className='flex items-center'>
+        <span className='font-medium w-32'>{label}:</span>
+        <span className='text-gray-700'>{value}</span>
+    </div>
+);
 
 export default JobDescription;

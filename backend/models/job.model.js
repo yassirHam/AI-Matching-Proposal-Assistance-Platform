@@ -1,16 +1,16 @@
 import pool from '../utils/db.js';
 
 export const createJobOffer = async (jobData) => {
-  const { job_title, city, job_link, source } = jobData;
+  const { job_title, city, job_link, source, company_id } = jobData;
 
   const query = `
     INSERT INTO job 
-    (job_title, city, job_link, source)
-    VALUES ($1, $2, $3, $4)
+    (job_title, city, job_link, source, created_at, company_id)
+    VALUES ($1, $2, $3, $4, NOW(), $5)
     RETURNING *;
   `;
 
-  const values = [job_title, city, job_link, source];
+  const values = [job_title, city, job_link, source, company_id];
 
   try {
     const result = await pool.query(query, values);
@@ -43,16 +43,16 @@ export const getJobOfferById = async (jobId) => {
 };
 
 export const updateJobOffer = async (jobId, updates) => {
-  const { job_title, city, job_link, source } = updates;
+  const { job_title, city, job_link, source, company_id } = updates;
 
   const query = `
     UPDATE job
-    SET job_title = $1, city = $2, job_link = $3, source = $4
-    WHERE id = $5
+    SET job_title = $1, city = $2, job_link = $3, source = $4, company_id = $5
+    WHERE id = $6
     RETURNING *;
   `;
 
-  const values = [job_title, city, job_link, source, jobId];
+  const values = [job_title, city, job_link, source, company_id, jobId];
 
   try {
     const result = await pool.query(query, values);
