@@ -19,7 +19,7 @@ import ProtectedRoute from './components/admin/ProtectedRoute'
 const appRouter = createBrowserRouter([
   {
     path: '/',
-    element: <Home />
+    element: <Home />,
   },
   {
     path: '/login',
@@ -34,7 +34,7 @@ const appRouter = createBrowserRouter([
     element: <Jobs />
   },
   {
-    path: "/description/:id",
+    path: "/jobs/:id", // More RESTful convention
     element: <JobDescription />
   },
   {
@@ -45,34 +45,49 @@ const appRouter = createBrowserRouter([
     path: "/profile",
     element: <Profile />
   },
+  // Admin routes
   {
-    path:"/admin/companies",
-    element: <ProtectedRoute><Companies/></ProtectedRoute>
-  },
-  {
-    path:"/admin/companies/create",
-    element: <ProtectedRoute><CompanyCreate/></ProtectedRoute>
-  },
-  {
-    path:"/admin/companies/:id",
-    element:<ProtectedRoute><CompanySetup/></ProtectedRoute>
-  },
-  {
-    path:"/admin/jobs",
-    element:<ProtectedRoute><AdminJobs/></ProtectedRoute>
-  },
-  {
-    path:"/admin/jobs/create",
-    element:<ProtectedRoute><PostJob/></ProtectedRoute>
-  },
-  {
-    path:"/admin/jobs/:id/applicants",
-    element:<ProtectedRoute><Applicants/></ProtectedRoute>
-  },
-
+    path: "/admin",
+    children: [
+      {
+        path: "companies",
+        children: [
+          {
+            index: true,
+            element: <ProtectedRoute><Companies/></ProtectedRoute>
+          },
+          {
+            path: "create",
+            element: <ProtectedRoute><CompanyCreate/></ProtectedRoute>
+          },
+          {
+            path: ":companyId", // More descriptive param name
+            element: <ProtectedRoute><CompanySetup/></ProtectedRoute>
+          }
+        ]
+      },
+      {
+        path: "jobs",
+        children: [
+          {
+            index: true,
+            element: <ProtectedRoute><AdminJobs/></ProtectedRoute>
+          },
+          {
+            path: "create",
+            element: <ProtectedRoute><PostJob/></ProtectedRoute>
+          },
+          {
+            path: ":jobId/applicants", // Consistent param naming
+            element: <ProtectedRoute><Applicants/></ProtectedRoute>
+          }
+        ]
+      }
+    ]
+  }
 ])
-function App() {
 
+function App() {
   return (
     <div>
       <RouterProvider router={appRouter} />
