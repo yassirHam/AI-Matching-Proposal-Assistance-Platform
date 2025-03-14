@@ -1,4 +1,4 @@
-import { query } from "../utils/db.js";
+import pool from "../utils/db.js";
 
 export const postJob = async (req, res) => {
   try {

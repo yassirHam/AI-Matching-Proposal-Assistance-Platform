@@ -44,15 +44,24 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// In your index.js/backend entry file
 const corsOptions = {
-  origin: process.env.CLIENT_URLS ?
-    process.env.CLIENT_URLS.split(',') :
-    ['http://localhost:5173'],
+  origin: process.env.CLIENT_URLS
+    ? process.env.CLIENT_URLS.split(',')
+    : ['http://localhost:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Content-Disposition']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Content-Disposition',
+    'x-requested-with' // Add this header
+  ]
 };
 app.use(cors(corsOptions));
+
+// Add OPTIONS request handler
+app.options('*', cors(corsOptions));
 
 app.use((req, res, next) => {
   req.db = pool;
@@ -103,7 +112,6 @@ app.get('/api/v1/health', async (req, res) => {
   }
 });
 
-// Handle 404
 app.all('*', (req, res) => {
   res.status(404).json({
     status: 'fail',
@@ -111,7 +119,6 @@ app.all('*', (req, res) => {
   });
 });
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error('🚨 Global error handler:', err);
   res.status(500).json({
@@ -121,13 +128,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Server setup
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });
 
-// Shutdown handlers
 const shutdown = async () => {
   console.log('🔴 Closing database pool');
   await pool.end();

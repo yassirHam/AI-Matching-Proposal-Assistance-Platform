@@ -1,17 +1,19 @@
-import { query } from "../utils/db.js";
+import pool from "../utils/db.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cloudinary from "../utils/cloudinary.js";
 
 export const register = async (req, res) => {
     try {
+        res.header('Access-Control-Allow-Origin', process.env.CLIENT_URLS);
+        res.header('Access-Control-Allow-Credentials', true);
         const { fullname, email, phone_number, password, role }  = req.body;
         const file = req.file;
 
-        const existingUser = await pool.query(
-            'SELECT * FROM users WHERE email = $1',
-            [email]
-        );
+         const existingUser = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
 
         if (existingUser.rows.length > 0) {
             return res.status(400).json({
