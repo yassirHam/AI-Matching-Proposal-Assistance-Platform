@@ -124,6 +124,7 @@ export const login = async (req, res) => {
         res.status(200).json({
             message: "Login successful",
             user: userData,
+            token: token, // Include token in response
             success: true
         });
 
@@ -146,7 +147,7 @@ export const logout = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-        const userId = req.id;
+        const userId = req.user.id; // Use req.user.id from isAuthenticated middleware
         const { fullname, email, phone_number, bio, skills } = req.body;
         const file = req.file;
 

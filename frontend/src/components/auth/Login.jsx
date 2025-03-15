@@ -52,12 +52,13 @@ const Login = () => {
         });
 
         if (response.data.success) {
+            localStorage.setItem('token', response.data.token);
             dispatch(setUser(response.data.user));
             toast.success("Login successful!");
             }
         } catch (error) {
-            const errorMessage = error.response?.data?.message || 
-                               error.message || 
+            const errorMessage = error.response?.data?.message ||
+                               error.message ||
                                "Login failed. Please try again.";
             toast.error(errorMessage);
             console.error("Login Error:", error);

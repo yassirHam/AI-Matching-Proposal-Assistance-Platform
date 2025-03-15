@@ -9,11 +9,13 @@ import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const UpdateProfileDialog = ({ open, setOpen }) => {
     const [loading, setLoading] = useState(false);
     const { user } = useSelector(store => store.auth);
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     const [input, setInput] = useState({
         fullname: user?.fullname || "",
@@ -35,14 +37,14 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData();
-        
+
         // Append all fields
         formData.append('fullname', input.fullname);
         formData.append('email', input.email);
         formData.append('phone_number', input.phone_number);
         formData.append('bio', input.bio);
         formData.append('skills', input.skills);
-        
+
         if (input.resume) {
             formData.append('resume', input.resume);
         }
@@ -53,7 +55,10 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                 `${USER_API_END_POINT}/profile/update`,
                 formData,
                 {
-                    headers: { 'Content-Type': 'multipart/form-data' },
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token
+                    },
                     withCredentials: true
                 }
             );
@@ -64,7 +69,12 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                 setOpen(false);
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Update failed');
+            if (error.response?.status === 401) {
+                toast.error('Session expired. Please log in again.');
+                navigate('/login');
+            } else {
+                toast.error(error.response?.data?.message || 'Update failed');
+            }
         } finally {
             setLoading(false);
         }
