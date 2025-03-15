@@ -1,25 +1,27 @@
+
 import pool from "../utils/db.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cloudinary from "../utils/cloudinary.js";
+import fs from 'fs';
 
 export const register = async (req, res) => {
     try {
-        console.log('Request body:', req.body);
-        console.log('Uploaded file:', req.file);
-        const { fullname, email, phone_number, password, role }  = req.body;
+        const { fullname, email, phone_number, password, role } = req.body;
         const file = req.file;
-           if (!file) {
+
+        if (!file) {
             return res.status(400).json({
                 success: false,
                 message: "Profile photo is required"
             });
         }
 
-         const existingUser = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
+        // Check existing user
+        const existingUser = await pool.query(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
+        );
 
         if (existingUser.rows.length > 0) {
             return res.status(400).json({
@@ -28,34 +30,150 @@ export const register = async (req, res) => {
             });
         }
 
-        let profilePhoto = null;
-        if (file) {
-            const cloudResponse = await cloudinary.uploader.upload(file.path);
-            profilePhoto = cloudResponse.secure_url;
-        }
+        // Upload to Cloudinary
+        const cloudResponse = await cloudinary.uploader.upload(file.path);
+        const profile_photo = cloudResponse.secure_url;
 
+        // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
+        // Create user
         const newUser = await pool.query(`
             INSERT INTO users (
                 fullname, email, phone_number, password, role, profile_photo
-            )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            ) VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id, fullname, email, phone_number, role, profile_photo
-        `, [fullname, email, phone_number, hashedPassword, role, profilePhoto]);
+        `, [fullname, email, phone_number, hashedPassword, role, profile_photo]);
 
         res.status(201).json({
-            message: "User registered successfully",
+            message: "Registration successful",
             user: newUser.rows[0],
             success: true
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server error", success: false });
+        console.error('Registration error:', error);
+
+        // Cleanup uploaded file
+        if (req.file) fs.unlinkSync(req.file.path);
+
+        res.status(500).json({
+            message: "Registration failed",
+            success: false,
+            error: process.env.NODE_ENV === 'development' ? error.message : null
+        });
     }
 };
 
+export const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { fullname, email, phone_number, bio, skills } = req.body;
+
+        // Handle both potential file uploads
+        const profilePhotoFile = req.files?.['profile_photo']?.[0];
+        const resumeFile = req.files?.['resume']?.[0];
+
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+
+        // Process profile photo
+        if (profilePhotoFile) {
+            const cloudResponse = await cloudinary.uploader.upload(profilePhotoFile.path);
+            updates.push(`profile_photo = $${paramCount}`);
+            values.push(cloudResponse.secure_url);
+            paramCount++;
+            fs.unlinkSync(profilePhotoFile.path); // Cleanup temp file
+        }
+
+        // Process resume
+        if (resumeFile) {
+            const cloudResponse = await cloudinary.uploader.upload(resumeFile.path, {
+                resource_type: 'raw',
+                format: path.extname(resumeFile.originalname).substring(1)
+            });
+            updates.push(`resume = $${paramCount}`);
+            updates.push(`resume_original_name = $${paramCount + 1}`);
+            values.push(cloudResponse.secure_url, resumeFile.originalname);
+            paramCount += 2;
+            fs.unlinkSync(resumeFile.path); // Cleanup temp file
+        }
+
+        // Handle text fields
+        if (fullname) {
+            updates.push(`fullname = $${paramCount}`);
+            values.push(fullname);
+            paramCount++;
+        }
+
+        if (email) {
+            updates.push(`email = $${paramCount}`);
+            values.push(email);
+            paramCount++;
+        }
+
+        if (phone_number) {
+            updates.push(`phone_number = $${paramCount}`);
+            values.push(phone_number);
+            paramCount++;
+        }
+
+        if (bio) {
+            updates.push(`bio = $${paramCount}`);
+            values.push(bio);
+            paramCount++;
+        }
+
+        if (skills) {
+            updates.push(`skills = $${paramCount}`);
+            values.push(skills.split(','));
+            paramCount++;
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({
+                message: "No fields to update",
+                success: false
+            });
+        }
+
+        const query = `
+            UPDATE users
+            SET ${updates.join(', ')}
+            WHERE id = $${paramCount}
+            RETURNING *
+        `;
+        values.push(userId);
+
+        const result = await pool.query(query, values);
+
+        res.status(200).json({
+            message: "Profile updated successfully",
+            user: result.rows[0],
+            success: true
+        });
+
+    } catch (error) {
+        console.error('Update error:', error);
+
+        // Cleanup any uploaded files on error
+        if (req.files?.['profile_photo']?.[0]) {
+            fs.unlinkSync(req.files['profile_photo'][0].path);
+        }
+        if (req.files?.['resume']?.[0]) {
+            fs.unlinkSync(req.files['resume'][0].path);
+        }
+
+        res.status(500).json({
+            message: "Profile update failed",
+            success: false,
+            error: process.env.NODE_ENV === 'development' ? error.message : null
+        });
+    }
+};
+
+// login and logout functions remain the same
 export const login = async (req, res) => {
     try {
         const { email, password, role } = req.body;
@@ -144,99 +262,4 @@ export const logout = async (req, res) => {
         message: "Logged out successfully",
         success: true
     });
-};
-
-export const updateProfile = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { fullname, email, phone_number, bio, skills } = req.body;
-        const file = req.file;
-
-        console.log('Updating profile for user ID:', userId);
-        console.log('Request body:', req.body);
-        console.log('Uploaded file:', file);
-
-        let resumeUrl = null;
-        let resumeName = null;
-        if (file) {
-            const cloudResponse = await cloudinary.uploader.upload(file.path);
-            resumeUrl = cloudResponse.secure_url;
-            resumeName = file.originalname;
-        }
-
-        const updateFields = [];
-        const values = [];
-        let paramCount = 1;
-
-        if (fullname) {
-            updateFields.push(`fullname = $${paramCount}`);
-            values.push(fullname);
-            paramCount++;
-        }
-
-        if (email) {
-            updateFields.push(`email = $${paramCount}`);
-            values.push(email);
-            paramCount++;
-        }
-
-        if (phone_number) {
-            updateFields.push(`phone_number = $${paramCount}`);
-            values.push(phone_number);
-            paramCount++;
-        }
-
-        if (bio) {
-            updateFields.push(`bio = $${paramCount}`);
-            values.push(bio);
-            paramCount++;
-        }
-
-        if (skills) {
-            updateFields.push(`skills = $${paramCount}`);
-            values.push(skills.split(','));
-            paramCount++;
-        }
-
-        if (resumeUrl) {
-            updateFields.push(`resume = $${paramCount}`);
-            values.push(resumeUrl);
-            paramCount++;
-            updateFields.push(`resume_original_name = $${paramCount}`);
-            values.push(resumeName);
-            paramCount++;
-        }
-
-        if (updateFields.length === 0) {
-            return res.status(400).json({
-                message: "No fields to update",
-                success: false
-            });
-        }
-
-        const query = `
-            UPDATE users
-            SET ${updateFields.join(', ')}
-            WHERE id = $${paramCount}
-            RETURNING *
-        `;
-        values.push(userId);
-
-        console.log('Executing query:', query);
-        console.log('Query values:', values);
-
-        const result = await pool.query(query, values);
-
-        console.log('Update result:', result.rows[0]);
-
-        res.status(200).json({
-            message: "Profile updated successfully",
-            user: result.rows[0],
-            success: true
-        });
-
-    } catch (error) {
-        console.error('Update profile error:', error);
-        res.status(500).json({ message: "Server error", success: false });
-    }
 };

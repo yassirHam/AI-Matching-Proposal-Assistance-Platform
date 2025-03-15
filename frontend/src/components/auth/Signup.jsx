@@ -27,6 +27,7 @@ const Signup = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    // Validate form fields
     const validateForm = () => {
         const newErrors = {};
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -44,6 +45,7 @@ const Signup = () => {
         return Object.keys(newErrors).length === 0;
     };
 
+    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validateForm()) return;
@@ -54,7 +56,7 @@ const Signup = () => {
         formData.append("phone_number", input.phone_number);
         formData.append("password", input.password);
         formData.append("role", input.role);
-        formData.append("profile_photo", input.file, input.file.name);
+        formData.append("profile_photo", input.file); // Ensure field name matches backend
 
         try {
             dispatch(setLoading(true));
@@ -101,6 +103,7 @@ const Signup = () => {
         }
     };
 
+    // Redirect if user is already logged in
     useEffect(() => {
         if (user) navigate("/");
     }, [user, navigate]);

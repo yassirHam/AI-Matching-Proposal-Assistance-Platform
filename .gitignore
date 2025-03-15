@@ -3,3 +3,4 @@ env
 /frontend/.env
 /backend/.env
 backend/tmp
+backend/data
