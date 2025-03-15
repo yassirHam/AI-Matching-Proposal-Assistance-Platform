@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 router.post("/job/post", isAuthenticated, postJob);
-router.get("/", getAllJobs); // Removed auth for public access
+router.get("/get", getAllJobs); // Removed auth for public access
 router.get("/job/admin", isAuthenticated, getAdminJobs);
 router.get("/job/:id", getJobById); // Public access
 

@@ -11,7 +11,7 @@ const useGetAllAdminJobs = () => {
         const fetchAllAdminJobs = async () => {
             try {
                 dispatch(setLoading(true));
-                const { data } = await axios.get(`${JOB_API_END_POINT}/admin`, {
+                const { data } = await axios.get(`${JOB_API_END_POINT}/job/admin`, {
                     withCredentials: true
                 });
 

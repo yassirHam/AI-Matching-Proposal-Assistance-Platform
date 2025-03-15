@@ -75,13 +75,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/companies", companyRoute);
 app.use("/api/v1/jobs", jobRoute);
 app.use("/api/v1/applications", applicationRoute);
 
-// Health check endpoint
 app.get('/api/v1/health', async (req, res) => {
   try {
     await req.db.query('SELECT 1');

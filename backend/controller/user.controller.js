@@ -62,7 +62,6 @@ export const login = async (req, res) => {
 
         console.log('Attempting login for email:', email);
 
-        // Case-insensitive email search
         const result = await pool.query(
             'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
             [email]
@@ -80,7 +79,6 @@ export const login = async (req, res) => {
         const user = result.rows[0];
         console.log('User found:', user.id);
 
-        // Compare passwords
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({
@@ -89,7 +87,6 @@ export const login = async (req, res) => {
             });
         }
 
-        // Verify role exactly
         if (user.role.toLowerCase() !== role.toLowerCase()) {
             return res.status(403).json({
                 message: "Invalid role access",
@@ -97,22 +94,26 @@ export const login = async (req, res) => {
             });
         }
 
-        // Generate token
         const token = jwt.sign(
             { userId: user.id },
             process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );
 
-        // Return response
         const userData = {
             id: user.id,
             fullname: user.fullname,
             email: user.email,
             phone_number: user.phone_number,
             role: user.role,
-            profile_photo: user.profile_photo
+            profile_photo: user.profile_photo,
+            bio: user.bio,
+            skills: user.skills,
+            resume: user.resume,
+            resume_original_name: user.resume_original_name
         };
+
+        console.log('Login response:', userData);
 
         res.cookie('token', token, {
             httpOnly: true,
@@ -124,7 +125,7 @@ export const login = async (req, res) => {
         res.status(200).json({
             message: "Login successful",
             user: userData,
-            token: token, // Include token in response
+            token: token,
             success: true
         });
 
@@ -147,9 +148,13 @@ export const logout = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
     try {
-        const userId = req.user.id; // Use req.user.id from isAuthenticated middleware
+        const userId = req.user.id;
         const { fullname, email, phone_number, bio, skills } = req.body;
         const file = req.file;
+
+        console.log('Updating profile for user ID:', userId);
+        console.log('Request body:', req.body);
+        console.log('Uploaded file:', file);
 
         let resumeUrl = null;
         let resumeName = null;
@@ -217,7 +222,12 @@ export const updateProfile = async (req, res) => {
         `;
         values.push(userId);
 
+        console.log('Executing query:', query);
+        console.log('Query values:', values);
+
         const result = await pool.query(query, values);
+
+        console.log('Update result:', result.rows[0]);
 
         res.status(200).json({
             message: "Profile updated successfully",
@@ -226,7 +236,7 @@ export const updateProfile = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error('Update profile error:', error);
         res.status(500).json({ message: "Server error", success: false });
     }
 };

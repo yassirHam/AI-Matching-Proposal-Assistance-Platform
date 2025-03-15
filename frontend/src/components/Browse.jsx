@@ -4,16 +4,19 @@ import Job from './Job';
 import { useDispatch } from 'react-redux';
 import { setSearchedQuery } from '@/redux/jobSlice';
 import useGetAllJobs from '@/hooks/useGetAllJobs';
+import Loader from './Loader'; // Keep Loader import
 
 const Browse = () => {
-    const { allJobs, isLoading, error } = useGetAllJobs();
-    const dispatch = useDispatch();
+    const dispatch = useDispatch(); // Hooks must be called first
+    const { allJobs, loading, error } = useGetAllJobs();
 
+    // Cleanup effect
     useEffect(() => {
         return () => dispatch(setSearchedQuery(""));
     }, [dispatch]);
 
-    if (isLoading) return (
+    // Loading state
+    if (loading) return (
         <div>
             <Navbar />
             <div className="max-w-7xl mx-auto my-10">
@@ -22,17 +25,19 @@ const Browse = () => {
         </div>
     );
 
+    // Error state - using inline error display
     if (error) return (
         <div>
             <Navbar />
             <div className="max-w-7xl mx-auto my-10">
                 <h1 className="font-bold text-xl my-10 text-red-500">
-                    Error: {error.message || "Failed to fetch jobs"}
+                    Error: {error || "Failed to fetch jobs"}
                 </h1>
             </div>
         </div>
     );
 
+    // Main return
     return (
         <div>
             <Navbar />
