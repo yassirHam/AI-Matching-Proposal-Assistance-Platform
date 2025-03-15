@@ -5,10 +5,16 @@ import cloudinary from "../utils/cloudinary.js";
 
 export const register = async (req, res) => {
     try {
-        res.header('Access-Control-Allow-Origin', process.env.CLIENT_URLS);
-        res.header('Access-Control-Allow-Credentials', true);
+        console.log('Request body:', req.body);
+        console.log('Uploaded file:', req.file);
         const { fullname, email, phone_number, password, role }  = req.body;
         const file = req.file;
+           if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: "Profile photo is required"
+            });
+        }
 
          const existingUser = await pool.query(
       'SELECT * FROM users WHERE email = $1',
@@ -54,11 +60,15 @@ export const login = async (req, res) => {
     try {
         const { email, password, role } = req.body;
 
+        console.log('Attempting login for email:', email);
+
         // Case-insensitive email search
         const result = await pool.query(
             'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
             [email]
         );
+
+        console.log('Query executed, rows found:', result.rows.length);
 
         if (result.rows.length === 0) {
             return res.status(400).json({
@@ -68,6 +78,7 @@ export const login = async (req, res) => {
         }
 
         const user = result.rows[0];
+        console.log('User found:', user.id);
 
         // Compare passwords
         const isMatch = await bcrypt.compare(password, user.password);
@@ -125,7 +136,6 @@ export const login = async (req, res) => {
         });
     }
 };
-
 export const logout = async (req, res) => {
     res.clearCookie('token');
     res.status(200).json({

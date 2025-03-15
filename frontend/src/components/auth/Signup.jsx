@@ -6,6 +6,7 @@ import { RadioGroup } from '../ui/radio-group';
 import { Button } from '../ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { USER_API_END_POINT } from '@/utils/constant';
 import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
 import { setLoading } from '@/redux/authSlice';
@@ -53,23 +54,24 @@ const Signup = () => {
         formData.append("phone_number", input.phone_number);
         formData.append("password", input.password);
         formData.append("role", input.role);
-        formData.append("profile_photo", input.file);
+        formData.append("profile_photo", input.file, input.file.name);
 
         try {
             dispatch(setLoading(true));
-            const { data } = await axios.post(
-                `${import.meta.env.VITE_API_BASE}/api/v1/users/register`,
+            const response = await axios.post(
+                `${USER_API_END_POINT}/register`,
                 formData,
                 {
                     headers: {
+                        'Content-Type': 'multipart/form-data',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     withCredentials: true,
-                    timeout: 10000
+                    timeout: 30000
                 }
             );
 
-            if (data.success) {
+            if (response.data.success) {
                 toast.success("Registration successful! Please login");
                 navigate("/login");
                 setInput({
@@ -82,11 +84,18 @@ const Signup = () => {
                 });
             }
         } catch (error) {
-            const errorMessage = error.response?.data?.message ||
+            const backendError = error.response?.data?.message;
+            const validationError = error.response?.data?.error;
+            const errorMessage = backendError ||
+                               validationError ||
                                error.message ||
                                "Registration failed. Please try again.";
+
             toast.error(errorMessage);
             console.error("Registration Error:", error);
+
+            // Clear password field on error
+            setInput(prev => ({ ...prev, password: "" }));
         } finally {
             dispatch(setLoading(false));
         }
@@ -104,6 +113,7 @@ const Signup = () => {
                     <h1 className='font-bold text-xl mb-5'>Sign Up</h1>
 
                     <div className='space-y-4'>
+                        {/* Full Name */}
                         <div>
                             <Label>Full Name *</Label>
                             <Input
@@ -115,6 +125,7 @@ const Signup = () => {
                             {errors.fullname && <span className="text-red-500 text-sm">{errors.fullname}</span>}
                         </div>
 
+                        {/* Email */}
                         <div>
                             <Label>Email *</Label>
                             <Input
@@ -126,6 +137,7 @@ const Signup = () => {
                             {errors.email && <span className="text-red-500 text-sm">{errors.email}</span>}
                         </div>
 
+                        {/* Phone Number */}
                         <div>
                             <Label>Phone Number *</Label>
                             <Input
@@ -137,6 +149,7 @@ const Signup = () => {
                             {errors.phone_number && <span className="text-red-500 text-sm">{errors.phone_number}</span>}
                         </div>
 
+                        {/* Password */}
                         <div>
                             <Label>Password *</Label>
                             <Input
@@ -148,6 +161,7 @@ const Signup = () => {
                             {errors.password && <span className="text-red-500 text-sm">{errors.password}</span>}
                         </div>
 
+                        {/* Role Selection */}
                         <div>
                             <Label>Role *</Label>
                             <RadioGroup className="flex items-center gap-4 mt-2">
@@ -175,6 +189,7 @@ const Signup = () => {
                             {errors.role && <span className="text-red-500 text-sm">{errors.role}</span>}
                         </div>
 
+                        {/* Profile Photo */}
                         <div>
                             <Label>Profile Photo *</Label>
                             <Input
@@ -187,6 +202,7 @@ const Signup = () => {
                         </div>
                     </div>
 
+                    {/* Submit Button */}
                     <div className="mt-6">
                         {loading ? (
                             <Button className="w-full" disabled>

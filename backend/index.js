@@ -15,6 +15,7 @@ import applicationRoute from "./routes/application.routes.js";
 
 const app = express();
 
+// Database setup
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -32,11 +33,10 @@ pool.connect()
     process.exit(1);
   });
 
+// Security middleware
 app.use(helmet());
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-app.use(cookieParser());
 
+// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -44,52 +44,38 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// In your index.js/backend entry file
+// CORS configuration
 const corsOptions = {
   origin: process.env.CLIENT_URLS
     ? process.env.CLIENT_URLS.split(',')
-    : ['http://localhost:5173'],
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
     'Content-Disposition',
-    'x-requested-with' // Add this header
+    'x-requested-with'
   ]
 };
-app.use(cors(corsOptions));
 
-// Add OPTIONS request handler
+app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
+// Body parsing middleware (for non-file routes)
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Cookie parser
+app.use(cookieParser());
+
+// Database middleware
 app.use((req, res, next) => {
   req.db = pool;
   next();
 });
 
-app.use('/api/v1/users', (req, res, next) => {
-  if (req.path === '/register' && req.method === 'POST') {
-    const requiredFields = ['fullname', 'email', 'phone_number', 'password', 'role'];
-    const missingFields = requiredFields.filter(field => !req.body[field]);
-
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Missing required fields: ${missingFields.join(', ')}`
-      });
-    }
-
-    if (typeof req.body.phone_number !== 'string') {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number must be a string'
-      });
-    }
-  }
-  next();
-});
-
+// Routes
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/companies", companyRoute);
 app.use("/api/v1/jobs", jobRoute);
@@ -98,7 +84,7 @@ app.use("/api/v1/applications", applicationRoute);
 // Health check endpoint
 app.get('/api/v1/health', async (req, res) => {
   try {
-    await req.db.query('SELECT 1'); // Database health check
+    await req.db.query('SELECT 1');
     res.status(200).json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -112,6 +98,7 @@ app.get('/api/v1/health', async (req, res) => {
   }
 });
 
+// 404 handler
 app.all('*', (req, res) => {
   res.status(404).json({
     status: 'fail',
@@ -119,6 +106,7 @@ app.all('*', (req, res) => {
   });
 });
 
+// Error handler
 app.use((err, req, res, next) => {
   console.error('🚨 Global error handler:', err);
   res.status(500).json({
@@ -128,11 +116,13 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Server setup
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });
 
+// Shutdown handlers
 const shutdown = async () => {
   console.log('🔴 Closing database pool');
   await pool.end();

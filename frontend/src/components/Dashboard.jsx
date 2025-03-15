@@ -14,6 +14,7 @@ const Dashboard = () => {
         }
     }, [user, loading, navigate]);
 
+    // Show loader while authentication is being checked
     if (loading) return <Loader />;
 
     return (
@@ -24,19 +25,22 @@ const Dashboard = () => {
 
                 {/* Dashboard Content */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-white p-6 rounded-lg shadow-md">
+                    {/* Profile Card */}
+                    <div
+                        className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => navigate('/profile')}
+                    >
                         <h2 className="text-xl font-semibold">Your Profile</h2>
-                        <p className="text-gray-600 mt-2">View and update your profile information.</p>
+                        <p className="text-gray-600 mt-2">View and update your profile information</p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-xl font-semibold">Applications</h2>
-                        <p className="text-gray-600 mt-2">Track your job applications.</p>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h2 className="text-xl font-semibold">Settings</h2>
-                        <p className="text-gray-600 mt-2">Manage your account settings.</p>
+                    {/* Explore Jobs Card */}
+                    <div
+                        className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => navigate('/jobs')} // Navigates to the jobs listing page
+                    >
+                        <h2 className="text-xl font-semibold">Explore Jobs</h2>
+                        <p className="text-gray-600 mt-2">Find and apply for new opportunities</p>
                     </div>
                 </div>
             </div>
