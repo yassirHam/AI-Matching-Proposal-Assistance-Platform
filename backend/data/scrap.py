@@ -13,6 +13,7 @@ from time import sleep
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def create_driver(headless=True):
+    """Create and configure a Selenium WebDriver."""
     options = Options()
     if headless:
         options.add_argument("--headless")
@@ -25,11 +26,11 @@ def create_driver(headless=True):
     return webdriver.Chrome(service=service, options=options)
 
 def scrape_linkedin_posts(driver, email, password):
+    """Scrape LinkedIn posts and save them to a CSV file."""
     logging.info("🔄 Logging into LinkedIn...")
     login_url = "https://www.linkedin.com/login"
     driver.get(login_url)
     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "username")))
-
     driver.find_element(By.ID, "username").send_keys(email)
     driver.find_element(By.ID, "password").send_keys(password)
     driver.find_element(By.ID, "password").submit()
@@ -77,7 +78,7 @@ def scrape_linkedin_posts(driver, email, password):
                 post_link = f"https://www.linkedin.com{post_link}"
 
             if post_text:
-                all_posts.append((post_text, post_link))
+                all_posts.append((post_text, "", post_link, "LinkedIn", 1))  # Format for database
                 logging.info(f"📌 Extracted post: {post_text[:60]}... ➝ {post_link}")
 
         try:
@@ -104,12 +105,13 @@ def scrape_linkedin_posts(driver, email, password):
 
     with open("linkedin_posts.csv", "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        writer.writerow(["Post Text", "Post Link"])  # Write headers
+        writer.writerow(["job_title", "city", "job_link", "source", "company_id"])  # Updated headers
         writer.writerows(all_posts)
 
     logging.info(f"✅ Scraped {len(all_posts)} LinkedIn posts. Saved to linkedin_posts.csv!")
 
 def scrape_anapec():
+    """Scrape job listings from Anapec and save them to a CSV file."""
     driver = create_driver(headless=False)
     base_url = "https://anapec.ma/home-page-o1/chercheur-emploi/offres-demploi/"
     driver.get(base_url)
@@ -150,7 +152,7 @@ def scrape_anapec():
             job_title = title_tag.text.strip() if title_tag else "No Title"
             job_location = location_tag.text.strip() if location_tag else "No Location"
 
-            all_jobs.append((job_title, job_link, job_location))
+            all_jobs.append((job_title, job_location, job_link, "Anapec", None))  # Format for database
             logging.info(f"📌 {job_title} ➝ {job_link} - 📍 {job_location}")
 
         next_page_link = soup.find("a", href=True, string="Suivant")  # Find "Next" button
@@ -171,12 +173,13 @@ def scrape_anapec():
 
     with open("anapec_jobs.csv", "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        writer.writerow(["Job Title", "Job Link", "Job Location"])  # Write headers
+        writer.writerow(["job_title", "city", "job_link", "source", "company_id"])  # Updated headers
         writer.writerows(all_jobs)
 
     logging.info(f"✅ Scraped {len(all_jobs)} Anapec jobs. Saved to anapec_jobs.csv!")
 
 def scrape_je_recrute():
+    """Scrape job listings from JeRecrute and save them to a CSV file."""
     driver = create_driver(headless=True)
     base_url = "https://www.je-recrute.com/category/maroc-job/"
     driver.get(base_url)
@@ -202,7 +205,7 @@ def scrape_je_recrute():
             link_tag = job.find("a", href=True)
             job_title = link_tag.text.strip() if link_tag else "No Title"
             job_link = link_tag["href"] if link_tag else "No Link"
-            all_jobs.add((job_title, job_link))
+            all_jobs.add((job_title, "", job_link, "JeRecrute", None))  # Format for database
 
         next_link = soup.find("link", rel="next")
         if next_link and next_link.get("href"):
@@ -212,10 +215,12 @@ def scrape_je_recrute():
             break
 
     driver.quit()
+
     with open("je_recrute_jobs.csv", "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        writer.writerow(["Job Title", "Job Link"])
+        writer.writerow(["job_title", "city", "job_link", "source", "company_id"])  # Updated headers
         writer.writerows(all_jobs)
+
     logging.info(f"✅ Scraped {len(all_jobs)} JeRecrute jobs. Saved to je_recrute_jobs.csv!")
 
 if __name__ == "__main__":

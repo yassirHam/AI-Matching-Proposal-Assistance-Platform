@@ -14,8 +14,6 @@ import jobRoute from "./routes/job.routes.js";
 import applicationRoute from "./routes/application.routes.js";
 
 const app = express();
-
-// Database setup
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -23,28 +21,41 @@ const pool = new Pool({
   }
 });
 
-pool.connect()
-  .then(client => {
+const initializeDatabase = async () => {
+  let client;
+  try {
+    client = await pool.connect();
     console.log("🟢 Connected to PostgreSQL database");
-    client.release();
-  })
-  .catch(err => {
-    console.error("🔴 Database connection failed:", err);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS job (
+        id SERIAL PRIMARY KEY,
+        job_title TEXT NOT NULL,
+        city TEXT NOT NULL,
+        job_link TEXT NOT NULL,
+        source TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        company_id INTEGER
+      );
+    `);
+    console.log("✅ Verified jobs table existence");
+
+  } catch (err) {
+    console.error("🔴 Database initialization failed:", err);
     process.exit(1);
-  });
+  } finally {
+    if (client) client.release();
+  }
+};
 
-// Security middleware
+initializeDatabase();
+
 app.use(helmet());
-
-// Rate limiting
-const limiter = rateLimit({
+app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
   message: 'Too many requests from this IP, please try again later'
-});
-app.use(limiter);
+}));
 
-// CORS configuration
 const corsOptions = {
   origin: process.env.CLIENT_URLS
     ? process.env.CLIENT_URLS.split(',')
@@ -62,17 +73,42 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// Body parsing middleware (for non-file routes)
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-
-// Cookie parser
 app.use(cookieParser());
 
-// Database middleware
 app.use((req, res, next) => {
   req.db = pool;
   next();
+});
+
+app.get('/api/v1/jobs', async (req, res) => {
+  try {
+    const { rows: jobs } = await req.db.query(`
+      SELECT id, job_title, city, job_link, source, created_at, company_id
+      FROM job
+      ORDER BY created_at DESC
+    `);
+
+    res.status(200).json({
+      success: true,
+      data: jobs.map(job => ({
+        id: job.id,
+        job_title: job.job_title,
+        city: job.city,
+        job_link: job.job_link,
+        source: job.source,
+        created_at: job.created_at,
+        company_id: job.company_id
+      }))
+    });
+  } catch (err) {
+    console.error('Database query error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch jobs'
+    });
+  }
 });
 
 app.use("/api/v1/users", userRoute);
@@ -96,7 +132,6 @@ app.get('/api/v1/health', async (req, res) => {
   }
 });
 
-// 404 handler
 app.all('*', (req, res) => {
   res.status(404).json({
     status: 'fail',
@@ -104,7 +139,6 @@ app.all('*', (req, res) => {
   });
 });
 
-// Error handler
 app.use((err, req, res, next) => {
   console.error('🚨 Global error handler:', err);
   res.status(500).json({
@@ -114,13 +148,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Server setup
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });
 
-// Shutdown handlers
 const shutdown = async () => {
   console.log('🔴 Closing database pool');
   await pool.end();
@@ -132,12 +164,5 @@ const shutdown = async () => {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
-process.on('unhandledRejection', (err) => {
-  console.error('💥 Unhandled Rejection:', err);
-  shutdown();
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('💥 Uncaught Exception:', err);
-  shutdown();
-});
+process.on('unhandledRejection', shutdown);
+process.on('uncaughtException', shutdown);
