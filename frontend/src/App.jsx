@@ -14,7 +14,7 @@ import AdminJobs from "./components/admin/AdminJobs";
 import PostJob from './components/admin/PostJob'
 import Applicants from './components/admin/Applicants'
 import ProtectedRoute from './components/admin/ProtectedRoute'
-
+import Dashboard from './components/Dashboard';
 
 const appRouter = createBrowserRouter([
   {
@@ -24,6 +24,10 @@ const appRouter = createBrowserRouter([
   {
     path: '/login',
     element: <Login />
+  },
+  {
+    path: '/dashboard',
+    element: <Dashboard />
   },
   {
     path: '/signup',

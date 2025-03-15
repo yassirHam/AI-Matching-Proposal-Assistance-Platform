@@ -37,24 +37,23 @@ const Login = () => {
     };
 
     const handleLogin = async (e) => {
-        e.preventDefault();
-        if (!validateForm()) return;
+    e.preventDefault();
+    if (!validateForm()) return;
 
-        try {
-            dispatch(setLoading(true));
-            const response = await axios.post(`${USER_API_END_POINT}/login`, credentials, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                withCredentials: true,
-                timeout: 10000
-            });
+    try {
+        dispatch(setLoading(true));
+        const response = await axios.post(`${USER_API_END_POINT}/login`, credentials, {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            withCredentials: true,
+            timeout: 10000
+        });
 
-            if (response.data.success) {
-                dispatch(setUser(response.data.user));
-                toast.success("Login successful!");
-                navigate("/dashboard");
+        if (response.data.success) {
+            dispatch(setUser(response.data.user));
+            toast.success("Login successful!");
             }
         } catch (error) {
             const errorMessage = error.response?.data?.message || 
@@ -62,8 +61,7 @@ const Login = () => {
                                "Login failed. Please try again.";
             toast.error(errorMessage);
             console.error("Login Error:", error);
-            
-            // Security: Clear sensitive fields on error
+
             setCredentials(prev => ({ ...prev, password: "" }));
         } finally {
             dispatch(setLoading(false));
@@ -71,8 +69,10 @@ const Login = () => {
     };
 
     useEffect(() => {
-        if (user) navigate("/dashboard");
-    }, [user, navigate]);
+    if (user && !loading) {
+        navigate('/dashboard');
+    }
+}, [user, loading, navigate]);
 
     return (
         <div>

@@ -6,7 +6,6 @@ import { RadioGroup } from '../ui/radio-group';
 import { Button } from '../ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import  USER_API_END_POINT from '@/utils/constant';
 import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
 import { setLoading } from '@/redux/authSlice';
@@ -58,22 +57,22 @@ const Signup = () => {
 
         try {
             dispatch(setLoading(true));
-            const response =axios.post(
-  `${import.meta.env.VITE_API_BASE}/api/v1/users/register`,
-  formData,
-  {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                withCredentials: true,
-                timeout: 10000
-            });
+            const { data } = await axios.post(
+                `${import.meta.env.VITE_API_BASE}/api/v1/users/register`,
+                formData,
+                {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    withCredentials: true,
+                    timeout: 10000
+                }
+            );
 
-            if (response.data.success) {
+            if (data.success) {
                 toast.success("Registration successful! Please login");
                 navigate("/login");
-                setInput({  // Reset form
+                setInput({
                     fullname: "",
                     email: "",
                     phone_number: "",
@@ -104,14 +103,11 @@ const Signup = () => {
                 <form onSubmit={handleSubmit} className='w-full md:w-1/2 border border-gray-200 rounded-md p-4 my-10'>
                     <h1 className='font-bold text-xl mb-5'>Sign Up</h1>
 
-                    {/* Form Fields */}
                     <div className='space-y-4'>
-                        {/* Full Name */}
                         <div>
                             <Label>Full Name *</Label>
                             <Input
                                 type="text"
-                                name="fullname"
                                 value={input.fullname}
                                 onChange={(e) => setInput({...input, fullname: e.target.value})}
                                 className={errors.fullname ? 'border-red-500' : ''}
@@ -119,12 +115,10 @@ const Signup = () => {
                             {errors.fullname && <span className="text-red-500 text-sm">{errors.fullname}</span>}
                         </div>
 
-                        {/* Email */}
                         <div>
                             <Label>Email *</Label>
                             <Input
                                 type="email"
-                                name="email"
                                 value={input.email}
                                 onChange={(e) => setInput({...input, email: e.target.value})}
                                 className={errors.email ? 'border-red-500' : ''}
@@ -132,12 +126,10 @@ const Signup = () => {
                             {errors.email && <span className="text-red-500 text-sm">{errors.email}</span>}
                         </div>
 
-                        {/* Phone Number */}
                         <div>
                             <Label>Phone Number *</Label>
                             <Input
                                 type="tel"
-                                name="phone_number"
                                 value={input.phone_number}
                                 onChange={(e) => setInput({...input, phone_number: e.target.value})}
                                 className={errors.phone_number ? 'border-red-500' : ''}
@@ -145,12 +137,10 @@ const Signup = () => {
                             {errors.phone_number && <span className="text-red-500 text-sm">{errors.phone_number}</span>}
                         </div>
 
-                        {/* Password */}
                         <div>
                             <Label>Password *</Label>
                             <Input
                                 type="password"
-                                name="password"
                                 value={input.password}
                                 onChange={(e) => setInput({...input, password: e.target.value})}
                                 className={errors.password ? 'border-red-500' : ''}
@@ -158,14 +148,12 @@ const Signup = () => {
                             {errors.password && <span className="text-red-500 text-sm">{errors.password}</span>}
                         </div>
 
-                        {/* Role Selection */}
                         <div>
                             <Label>Role *</Label>
                             <RadioGroup className="flex items-center gap-4 mt-2">
                                 <div className="flex items-center space-x-2">
                                     <Input
                                         type="radio"
-                                        name="role"
                                         value="student"
                                         checked={input.role === 'student'}
                                         onChange={(e) => setInput({...input, role: e.target.value})}
@@ -176,7 +164,6 @@ const Signup = () => {
                                 <div className="flex items-center space-x-2">
                                     <Input
                                         type="radio"
-                                        name="role"
                                         value="recruiter"
                                         checked={input.role === 'recruiter'}
                                         onChange={(e) => setInput({...input, role: e.target.value})}
@@ -188,7 +175,6 @@ const Signup = () => {
                             {errors.role && <span className="text-red-500 text-sm">{errors.role}</span>}
                         </div>
 
-                        {/* Profile Photo */}
                         <div>
                             <Label>Profile Photo *</Label>
                             <Input
@@ -201,7 +187,6 @@ const Signup = () => {
                         </div>
                     </div>
 
-                    {/* Submit Button */}
                     <div className="mt-6">
                         {loading ? (
                             <Button className="w-full" disabled>
