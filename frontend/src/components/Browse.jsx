@@ -4,18 +4,16 @@ import Job from './Job';
 import { useDispatch } from 'react-redux';
 import { setSearchedQuery } from '@/redux/jobSlice';
 import useGetAllJobs from '@/hooks/useGetAllJobs';
-import Loader from './Loader'; // Keep Loader import
+import Loader from './Loader';
 
 const Browse = () => {
     const dispatch = useDispatch(); // Hooks must be called first
     const { allJobs, loading, error } = useGetAllJobs();
 
-    // Cleanup effect
     useEffect(() => {
         return () => dispatch(setSearchedQuery(""));
     }, [dispatch]);
 
-    // Loading state
     if (loading) return (
         <div>
             <Navbar />
@@ -37,7 +35,6 @@ const Browse = () => {
         </div>
     );
 
-    // Main return
     return (
         <div>
             <Navbar />

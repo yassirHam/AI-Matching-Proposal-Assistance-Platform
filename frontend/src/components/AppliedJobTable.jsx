@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 import { useSelector } from 'react-redux';
-import { format } from 'date-fns'; // Import date-fns for date formatting
-import { Button } from './ui/button'; // Assuming you have a Button component for pagination controls
+import { format } from 'date-fns';
+import { Button } from './ui/button';
 
 const AppliedJobTable = () => {
     const { allAppliedJobs } = useSelector(store => store.job);
@@ -23,15 +23,12 @@ const AppliedJobTable = () => {
         }
     };
 
-    // Pagination logic
     const indexOfLastJob = currentPage * jobsPerPage;
     const indexOfFirstJob = indexOfLastJob - jobsPerPage;
     const currentJobs = allAppliedJobs.slice(indexOfFirstJob, indexOfLastJob);
 
-    // Change page
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-    // Total number of pages
     const totalPages = Math.ceil(allAppliedJobs.length / jobsPerPage);
 
     return (
