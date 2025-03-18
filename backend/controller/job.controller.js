@@ -117,7 +117,7 @@ export const getJobById = async (req, res) => {
 export const getAdminJobs = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT j.*, c.name as company_name
+      `SELECT j.*, c.name as company_name, c.logo as company_logo
        FROM job j
        LEFT JOIN companies c ON j.company_id = c.id
        ORDER BY j.created_at DESC`

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Bookmark } from 'lucide-react';
 import { Avatar, AvatarImage } from './ui/avatar';
@@ -6,13 +6,20 @@ import { useNavigate } from 'react-router-dom';
 
 const Job = ({ job }) => {
     const navigate = useNavigate();
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const daysAgo = Math.floor(
         (new Date() - new Date(job.created_at)) / (1000 * 60 * 60 * 24)
     );
 
+    // Toggle description expansion
+    const toggleDescription = () => {
+        setIsExpanded(!isExpanded);
+    };
+
     return (
         <div className="p-5 rounded-md shadow-xl bg-white border border-gray-100">
+            {/* Job Metadata */}
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500">
                     {daysAgo === 0 ? "Today" : `${daysAgo} days ago`}
@@ -22,6 +29,7 @@ const Job = ({ job }) => {
                 </Button>
             </div>
 
+            {/* Company Info */}
             <div className="flex items-center gap-2 my-2">
                 <Button className="p-6" variant="outline" size="icon">
                     <Avatar>
@@ -29,13 +37,35 @@ const Job = ({ job }) => {
                     </Avatar>
                 </Button>
                 <div>
-                    <h1 className="font-medium text-lg">{job.company?.name}</h1>
+                    <h1 className="font-medium text-lg">{job.company_name}</h1>
                     <p className="text-sm text-gray-500">{job.city}</p>
                 </div>
             </div>
 
+            {/* Job Title */}
             <h1 className="font-bold text-lg my-2">{job.job_title}</h1>
 
+            {/* Job Description */}
+            {job.description && (
+                <div className="mt-2 text-sm text-gray-600">
+                    {isExpanded
+                        ? job.description
+                        : `${job.description.substring(0, 120)}${job.description.length > 120 ? '...' : ''}`
+                    }
+                </div>
+            )}
+
+            {/* Read More Button */}
+            {job.description?.length > 120 && (
+                <button
+                    onClick={toggleDescription}
+                    className="mt-2 text-blue-600 text-sm hover:underline"
+                >
+                    {isExpanded ? 'Read Less' : 'Read More'}
+                </button>
+            )}
+
+            {/* Action Buttons */}
             <div className="flex items-center gap-4 mt-4">
                 <Button
                     onClick={() => navigate(`/description/${job.id}`)}
