@@ -1,4 +1,4 @@
-
+import path from 'path';
 import pool from "../utils/db.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -80,24 +80,33 @@ export const updateProfile = async (req, res) => {
 
         // Process profile photo
         if (profilePhotoFile) {
-            const cloudResponse = await cloudinary.uploader.upload(profilePhotoFile.path);
+            const cloudResponse = await cloudinary.uploader.upload(profilePhotoFile.path, {
+                folder: 'profile_photos',
+                transformation: [{ width: 500, height: 500, crop: 'limit' }]
+            });
             updates.push(`profile_photo = $${paramCount}`);
             values.push(cloudResponse.secure_url);
             paramCount++;
             fs.unlinkSync(profilePhotoFile.path); // Cleanup temp file
         }
 
-        // Process resume
+        // Process resume - FIXED
         if (resumeFile) {
+            // Get filename without extension
+            const originalName = path.parse(resumeFile.originalname).name;
+            const uniqueFilename = `resume_${Date.now()}_${originalName}`;
+
             const cloudResponse = await cloudinary.uploader.upload(resumeFile.path, {
                 resource_type: 'raw',
-                format: path.extname(resumeFile.originalname).substring(1)
+                public_id: `resumes/${uniqueFilename}`,
+                overwrite: true
             });
+
             updates.push(`resume = $${paramCount}`);
             updates.push(`resume_original_name = $${paramCount + 1}`);
             values.push(cloudResponse.secure_url, resumeFile.originalname);
             paramCount += 2;
-            fs.unlinkSync(resumeFile.path); // Cleanup temp file
+            fs.unlinkSync(resumeFile.path);
         }
 
         // Handle text fields
@@ -127,7 +136,7 @@ export const updateProfile = async (req, res) => {
 
         if (skills) {
             updates.push(`skills = $${paramCount}`);
-            values.push(skills.split(','));
+            values.push(skills.split(',').map(skill => skill.trim()));
             paramCount++;
         }
 
@@ -138,6 +147,7 @@ export const updateProfile = async (req, res) => {
             });
         }
 
+        // Build the query
         const query = `
             UPDATE users
             SET ${updates.join(', ')}
@@ -146,6 +156,7 @@ export const updateProfile = async (req, res) => {
         `;
         values.push(userId);
 
+        // Execute the query
         const result = await pool.query(query, values);
 
         res.status(200).json({
@@ -156,6 +167,13 @@ export const updateProfile = async (req, res) => {
 
     } catch (error) {
         console.error('Update error:', error);
+
+        // Enhanced error logging
+        console.error('Error details:', {
+            files: req.files,
+            body: req.body,
+            stack: error.stack
+        });
 
         // Cleanup any uploaded files on error
         if (req.files?.['profile_photo']?.[0]) {
@@ -168,7 +186,10 @@ export const updateProfile = async (req, res) => {
         res.status(500).json({
             message: "Profile update failed",
             success: false,
-            error: process.env.NODE_ENV === 'development' ? error.message : null
+            error: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                stack: error.stack
+            } : null
         });
     }
 };

@@ -22,20 +22,48 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
         email: user?.email || "",
         phone_number: user?.phone_number || "",
         bio: user?.bio || "",
-        skills: user?.skills?.join(', ') || "", // Convert array to comma-separated string
+        skills: user?.skills?.join(', ') || "",
         resume: null
     });
+
+    const [resumeError, setResumeError] = useState('');
 
     const handleInputChange = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value });
     };
 
     const handleFileChange = (e) => {
-        setInput({ ...input, resume: e.target.files[0] });
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file type and size
+            const allowedTypes = ['application/pdf', 'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+
+            if (!allowedTypes.includes(file.type)) {
+                setResumeError('Only PDF, DOC, and DOCX files are allowed');
+                return;
+            }
+
+            if (file.size > maxSize) {
+                setResumeError('File size must be less than 5MB');
+                return;
+            }
+
+            setResumeError('');
+            setInput({ ...input, resume: file });
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validate resume file if selected
+        if (input.resume && resumeError) {
+            toast.error(resumeError);
+            return;
+        }
+
         const formData = new FormData();
 
         // Append all fields
@@ -45,6 +73,7 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
         formData.append('bio', input.bio);
         formData.append('skills', input.skills);
 
+        // Append resume file if selected
         if (input.resume) {
             formData.append('resume', input.resume);
         }
@@ -57,7 +86,7 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                 {
                     headers: {
                         'Content-Type': 'multipart/form-data',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}` // Include token
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
                     },
                     withCredentials: true
                 }
@@ -73,7 +102,11 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                 toast.error('Session expired. Please log in again.');
                 navigate('/login');
             } else {
-                toast.error(error.response?.data?.message || 'Update failed');
+                const errorMessage = error.response?.data?.message || 'Update failed';
+                if (errorMessage.toLowerCase().includes('resume')) {
+                    setResumeError(errorMessage);
+                }
+                toast.error(errorMessage);
             }
         } finally {
             setLoading(false);
@@ -165,13 +198,18 @@ const UpdateProfileDialog = ({ open, setOpen }) => {
                             <Label htmlFor="resume" className="text-right">
                                 Resume
                             </Label>
-                            <Input
-                                id="resume"
-                                type="file"
-                                accept=".pdf,.doc,.docx"
-                                onChange={handleFileChange}
-                                className="col-span-3"
-                            />
+                            <div className="col-span-3">
+                                <Input
+                                    id="resume"
+                                    type="file"
+                                    accept=".pdf,.doc,.docx"
+                                    onChange={handleFileChange}
+                                    className={resumeError ? 'border-red-500' : ''}
+                                />
+                                {resumeError && (
+                                    <p className="text-sm text-red-500 mt-1">{resumeError}</p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
