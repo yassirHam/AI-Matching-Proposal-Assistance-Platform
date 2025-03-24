@@ -59,10 +59,10 @@ export const getAllJobs = async (req, res) => {
       queryParams.push(`%${keyword}%`);
     }
 
-    if (city) {
-      whereClauses.push(`j.city = $${queryParams.length + 1}`);
-      queryParams.push(city);
-    }
+   if (city) {
+  whereClauses.push(`j.city ILIKE $${queryParams.length + 1}`);
+  queryParams.push(`%${city}%`);
+}
 
     if (source) {
       whereClauses.push(`source = $${queryParams.length + 1}`);

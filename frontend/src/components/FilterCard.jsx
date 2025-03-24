@@ -8,7 +8,7 @@ const filterOptions = [
   {
     category: 'city',
     label: 'city',
-    values: ['Casablanca', 'Marrakech', 'Rabat', 'Tanger', 'Beni Mellal']
+    values: ['casablanca', 'marrakech', 'rabat', 'tanger', 'beni mellal']
   },
   {
     category: 'source',
@@ -37,11 +37,11 @@ const FilterCard = () => {
             onValueChange={(value) => handleFilterChange(filter.category, value)}
           >
             {filter.values.map((value) => (
-              <div key={value} className="flex items-center space-x-2 mb-2">
+             <div key={value} className="flex items-center space-x-2 mb-2">
                 <RadioGroupItem value={value} id={`${filter.category}-${value}`} />
-                <Label htmlFor={`${filter.category}-${value}`} className="text-sm">
-                  {value}
-                </Label>
+                    <Label htmlFor={`${filter.category}-${value}`} className="text-sm capitalize">
+                       {value}
+                     </Label>
               </div>
             ))}
           </RadioGroup>

@@ -54,7 +54,9 @@ const Jobs = () => {
               </h1>
               {(filters.city || filters.source) && (
                 <div className="mt-2 text-sm text-gray-600">
-                  {filters.city && <span className="mr-3">City: {filters.city}</span>}
+                  {filters.city && (
+                    <span className="mr-3 capitalize">City: {filters.city}</span>
+                  )}
                   {filters.source && <span>Source: {filters.source}</span>}
                 </div>
               )}

@@ -64,7 +64,7 @@ const jobSlice = createSlice({
     },
     clearFilters: (state) => {
       state.filters = {
-        location: "",
+        city: "",
         source: ""
       };
     }
