@@ -47,7 +47,7 @@ try:
             print(f"✅ Inserted {len(job_data)} jobs from {csv_file_path}")
 
 
-    '''def clean_data():
+    def clean_data():
         """Clean and normalize CSV data"""
         # Process Anapec data
         df_anapec = pd.read_csv("anapec_jobs.csv")
@@ -75,7 +75,7 @@ try:
         # Save cleaned data
         df_anapec.to_csv("clean_anapec_jobs.csv", index=False)
         df_je_recrute.to_csv("clean_je_recrute_jobs.csv", index=False)
-        print("✅ Anapec and JeRecrute data cleaned and saved!")'''
+        print("✅ Anapec and JeRecrute data cleaned and saved!")
 
 
     def clean_linkedin_data():

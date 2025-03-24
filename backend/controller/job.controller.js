@@ -38,51 +38,84 @@ export const postJob = async (req, res) => {
 
 export const getAllJobs = async (req, res) => {
   try {
-    const { keyword = "", page = 1, limit = 20 } = req.query;
-    const offset = (page - 1) * limit;
+    const {
+      page = 1,
+      limit = 20,
+      keyword = '',
+      city = '',
+      source = ''
+    } = req.query;
 
-    // Base query
-    const query = {
-      text: `SELECT j.*, c.name as company_name, c.logo as company_logo
-             FROM job j
-             LEFT JOIN companies c ON j.company_id = c.id
-             WHERE j.job_title ILIKE $1 OR j.city ILIKE $1
-             ORDER BY j.created_at DESC
-             LIMIT $2 OFFSET $3`,
-      values: [`%${keyword}%`, limit, offset]
-    };
+    // Validate numeric parameters
+    const pageInt = Math.max(1, parseInt(page)) || 1;
+    const limitInt = Math.min(100, Math.max(1, parseInt(limit))) || 20;
+    const offset = (pageInt - 1) * limitInt;
 
-    // Count query
-    const countQuery = {
-      text: `SELECT COUNT(*) FROM job 
-             WHERE job_title ILIKE $1 OR city ILIKE $1`,
-      values: [`%${keyword}%`]
-    };
+    const queryParams = [];
+    const whereClauses = [];
 
-    const [jobsResult, countResult] = await Promise.all([
-      pool.query(query),
-      pool.query(countQuery)
-    ]);
+    if (keyword) {
+      whereClauses.push(`(job_title ILIKE $${queryParams.length + 1} OR description ILIKE $${queryParams.length + 1})`);
+      queryParams.push(`%${keyword}%`);
+    }
 
-    res.status(200).json({
+    if (city) {
+      whereClauses.push(`j.city = $${queryParams.length + 1}`);
+      queryParams.push(city);
+    }
+
+    if (source) {
+      whereClauses.push(`source = $${queryParams.length + 1}`);
+      queryParams.push(source);
+    }
+
+    const whereString = whereClauses.length > 0
+      ? `WHERE ${whereClauses.join(' AND ')}`
+      : '';
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) FROM job j ${whereString}`;
+    const countResult = await pool.query(countQuery, queryParams);
+    const totalJobs = parseInt(countResult.rows[0].count);
+    const totalPages = Math.max(1, Math.ceil(totalJobs / limitInt));
+
+    // Validate page against actual total pages
+    const validatedPage = Math.min(pageInt, totalPages);
+
+    // Get paginated jobs
+    const jobsQuery = `
+      SELECT j.*, c.name as company_name, c.logo as company_logo
+      FROM job j
+      LEFT JOIN companies c ON j.company_id = c.id
+      ${whereString}
+      ORDER BY created_at DESC
+      LIMIT $${queryParams.length + 1}
+      OFFSET $${queryParams.length + 2}
+    `;
+
+    const jobsResult = await pool.query(jobsQuery,
+      [...queryParams, limitInt, (validatedPage - 1) * limitInt]
+    );
+
+    res.json({
       success: true,
       data: {
         jobs: jobsResult.rows,
-        total: parseInt(countResult.rows[0].count),
-        page: parseInt(page),
-        totalPages: Math.ceil(countResult.rows[0].count / limit)
+        total: totalJobs,
+        totalPages: totalPages,
+        currentPage: validatedPage,
+        limit: limitInt
       }
     });
 
   } catch (error) {
-    console.error("Get jobs error:", error);
+    console.error('Error fetching jobs:', error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch jobs"
+      message: 'Failed to fetch jobs'
     });
   }
 };
-
 export const getJobById = async (req, res) => {
   try {
     const result = await pool.query(
@@ -116,18 +149,20 @@ export const getJobById = async (req, res) => {
 
 export const getAdminJobs = async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT j.*, c.name as company_name, c.logo as company_logo
-       FROM job j
-       LEFT JOIN companies c ON j.company_id = c.id
-       ORDER BY j.created_at DESC`
-    );
+    const result = await pool.query(`
+      SELECT j.*, c.name as company_name, c.logo as company_logo
+      FROM job j
+      LEFT JOIN companies c ON j.company_id = c.id
+      ORDER BY j.created_at DESC
+    `);
 
     res.status(200).json({
       success: true,
-      data: result.rows
+      data: {
+        jobs: result.rows,
+        total: result.rows.length
+      }
     });
-
   } catch (error) {
     console.error("Get admin jobs error:", error);
     res.status(500).json({

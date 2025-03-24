@@ -9,8 +9,18 @@ const jobSlice = createSlice({
     searchJobByText: "",
     allAppliedJobs: [],
     searchedQuery: "",
-    error: null, // Add error state
-    loading: false, // Add loading state
+    error: null,
+    loading: false,
+    filters: {
+      city: "",
+      source: ""
+    },
+    pagination: {
+      currentPage: 1,
+      totalPages: 1,
+      totalJobs: 0,
+      limit: 20
+    }
   },
   reducers: {
     setAllJobs: (state, action) => {
@@ -31,16 +41,36 @@ const jobSlice = createSlice({
     setSearchedQuery: (state, action) => {
       state.searchedQuery = action.payload;
     },
-    setError: (state, action) => { // Add setError reducer
+    setError: (state, action) => {
       state.error = action.payload;
     },
-    setLoading: (state, action) => { // Add setLoading reducer
+    setLoading: (state, action) => {
       state.loading = action.payload;
     },
+   setPagination: (state, action) => {
+      state.pagination = {
+        ...state.pagination,
+        ...action.payload
+      };
+    },
+    setCurrentPage: (state, action) => {
+      state.pagination.currentPage = action.payload;
+    },
+    setLimit: (state, action) => {
+      state.pagination.limit = action.payload;
+    },
+    setFilters: (state, action) => {
+      state.filters = action.payload;
+    },
+    clearFilters: (state) => {
+      state.filters = {
+        location: "",
+        source: ""
+      };
+    }
   },
 });
 
-// Export all actions
 export const {
   setAllJobs,
   setSingleJob,
@@ -48,8 +78,13 @@ export const {
   setSearchJobByText,
   setAllAppliedJobs,
   setSearchedQuery,
-  setError, // Export setError
-  setLoading, // Export setLoading
+  setError,
+  setLoading,
+  setPagination,
+  setCurrentPage,
+  setLimit,
+  setFilters,
+  clearFilters
 } = jobSlice.actions;
 
 export default jobSlice.reducer;

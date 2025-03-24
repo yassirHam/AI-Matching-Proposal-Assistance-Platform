@@ -1,56 +1,54 @@
-import React, { useEffect, useState } from 'react'
-import { RadioGroup, RadioGroupItem } from './ui/radio-group'
-import { Label } from './ui/label'
-import { useDispatch } from 'react-redux'
-import { setSearchedQuery } from '@/redux/jobSlice'
+import React from 'react';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Label } from './ui/label';
+import { useDispatch, useSelector } from 'react-redux';
+import { setFilters } from '@/redux/jobSlice';
 
-const filterData = [
-    {
-        filterType: "Location",
-        options: ["Casablanca", "Marrakech", "Rabat", "Tanger", "Beni Mellal"]
-    },
-    {
-        filterType: "Job Source",
-        options: ["LinkedIn", "Anapec", "je-recrute", "Other"]
-    }
-]
+const filterOptions = [
+  {
+    category: 'city',
+    label: 'city',
+    values: ['Casablanca', 'Marrakech', 'Rabat', 'Tanger', 'Beni Mellal']
+  },
+  {
+    category: 'source',
+    label: 'Job Source',
+    values: ['LinkedIn', 'Anapec', 'JeRecrute', 'Other']
+  }
+];
 
 const FilterCard = () => {
-    const [selectedValue, setSelectedValue] = useState('');
-    const dispatch = useDispatch();
-    
-    const changeHandler = (value) => {
-        setSelectedValue(value);
-    }
+  const dispatch = useDispatch();
+  const { filters } = useSelector((state) => state.job);
 
-    useEffect(() => {
-        dispatch(setSearchedQuery(selectedValue));
-    }, [selectedValue, dispatch]);
+  const handleFilterChange = (category, value) => {
+    dispatch(setFilters({ [category]: value }));
+  };
 
-    return (
-        <div className='w-full bg-white p-3 rounded-md'>
-            <h1 className='font-bold text-lg'>Filter Jobs</h1>
-            <hr className='mt-3' />
-            <RadioGroup value={selectedValue} onValueChange={changeHandler}>
-                {filterData.map((data, index) => (
-                    <div key={`filter-${index}`}>
-                        <h1 className='font-bold text-lg mt-4'>{data.filterType}</h1>
-                        {data.options.map((item, idx) => {
-                            const itemId = `filter-${index}-${idx}`
-                            return (
-                                <div key={itemId} className='flex items-center space-x-2 my-2'>
-                                    <RadioGroupItem value={item} id={itemId} />
-                                    <Label htmlFor={itemId} className='cursor-pointer'>
-                                        {item}
-                                    </Label>
-                                </div>
-                            )
-                        })}
-                    </div>
-                ))}
-            </RadioGroup>
+  return (
+    <div className="w-full bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+      <h2 className="text-lg font-semibold mb-4">Filter Jobs</h2>
+
+      {filterOptions.map((filter) => (
+        <div key={filter.category} className="mb-6">
+          <h3 className="font-medium text-gray-700 mb-3">{filter.label}</h3>
+          <RadioGroup
+            value={filters[filter.category]}
+            onValueChange={(value) => handleFilterChange(filter.category, value)}
+          >
+            {filter.values.map((value) => (
+              <div key={value} className="flex items-center space-x-2 mb-2">
+                <RadioGroupItem value={value} id={`${filter.category}-${value}`} />
+                <Label htmlFor={`${filter.category}-${value}`} className="text-sm">
+                  {value}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
         </div>
-    )
-}
+      ))}
+    </div>
+  );
+};
 
-export default FilterCard
+export default FilterCard;
