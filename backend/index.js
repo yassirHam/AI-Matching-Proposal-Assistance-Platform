@@ -11,7 +11,7 @@ const { Pool } = pg;
 import userRoute from "./routes/user.routes.js";
 import companyRoute from "./routes/company.routes.js";
 import jobRoute from "./routes/job.routes.js";
-import applicationRoute from "./routes/application.routes.js";
+import applicationRoutes from "./routes/application.routes.js";
 
 const app = express();
 const pool = new Pool({
@@ -114,7 +114,7 @@ app.get('/api/v1/jobs', async (req, res) => {
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/companies", companyRoute);
 app.use("/api/v1/jobs", jobRoute);
-app.use("/api/v1/applications", applicationRoute);
+app.use("/api/v1/applications", applicationRoutes);
 
 app.get('/api/v1/health', async (req, res) => {
   try {

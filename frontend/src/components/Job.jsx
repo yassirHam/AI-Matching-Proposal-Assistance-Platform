@@ -10,19 +10,32 @@ const Job = ({ job }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
 
-    // Calculate days since posting
-    const postDate = new Date(job.created_at);
-    const daysAgo = Math.floor((Date.now() - postDate) / (86400000));
-    const timePosted = daysAgo === 0 ? "Today" :
-                     daysAgo === 1 ? "1 day ago" :
-                     `${daysAgo} days ago`;
+    // Safely calculate days since posting
+    const getTimePosted = () => {
+        if (!job?.created_at) return "Recently";
 
-    // Handle description truncation
+        try {
+            const postDate = new Date(job.created_at);
+            if (isNaN(postDate.getTime())) return "Recently";
+
+            const daysAgo = Math.floor((Date.now() - postDate) / 86400000);
+            return daysAgo === 0 ? "Today" :
+                   daysAgo === 1 ? "1 day ago" :
+                   `${daysAgo} days ago`;
+        } catch {
+            return "Recently";
+        }
+    };
+
+    const timePosted = getTimePosted();
+
+    // Safe description handling
     const MAX_DESCRIPTION_LENGTH = 120;
-    const shouldTruncate = job.description?.length > MAX_DESCRIPTION_LENGTH;
+    const description = job?.description || '';
+    const shouldTruncate = description.length > MAX_DESCRIPTION_LENGTH;
     const descriptionPreview = shouldTruncate
-        ? `${job.description.substring(0, MAX_DESCRIPTION_LENGTH)}...`
-        : job.description;
+        ? `${description.substring(0, MAX_DESCRIPTION_LENGTH)}...`
+        : description;
 
     // Toggle save job status
     const handleSaveJob = (e) => {
@@ -30,18 +43,28 @@ const Job = ({ job }) => {
         setIsSaved(!isSaved);
     };
 
-    // Navigate to job details
+    // Safe navigation functions
     const handleViewDetails = () => {
-        navigate(`/description/${job.id}`);
+        if (job?.id) {
+            navigate(`/jobs/${job.id}`);
+        }
     };
 
-    // Navigate to company profile
-    const handleViewCompany = () => {
-        navigate(`/company/${job.company_id}`);
+    const handleViewCompany = (e) => {
+        e.stopPropagation();
+        if (job?.company_id) {
+            navigate(`/company/${job.company_id}`);
+        }
     };
 
     return (
-        <div className="p-5 rounded-md shadow-xl bg-white border border-gray-100 hover:shadow-lg transition-shadow duration-200">
+        <div
+            className="p-5 rounded-md shadow-xl bg-white border border-gray-100 hover:shadow-lg transition-shadow duration-200"
+            onClick={handleViewDetails}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && handleViewDetails()}
+        >
             {/* Job Metadata */}
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-500">
@@ -65,38 +88,42 @@ const Job = ({ job }) => {
                     variant="outline"
                     size="icon"
                     onClick={handleViewCompany}
+                    aria-label={`View ${job.company_name || 'company'} profile`}
                 >
                     <Avatar>
                         <AvatarImage
                             src={job.company?.logo}
-                            alt={`${job.company_name} logo`}
+                            alt={`${job.company_name || 'Company'} logo`}
                             className="object-contain"
                         />
                         <AvatarFallback className="bg-gray-100 text-gray-600">
-                            {job.company_name?.charAt(0).toUpperCase()}
+                            {(job.company_name || 'C').charAt(0).toUpperCase()}
                         </AvatarFallback>
                     </Avatar>
                 </Button>
                 <div>
-                    <h1 className="font-medium text-lg">{job.company_name}</h1>
-                    <p className="text-sm text-gray-500">{job.city}</p>
+                    <h1 className="font-medium text-lg">{job.company_name || 'Unknown Company'}</h1>
+                    <p className="text-sm text-gray-500">{job.city || 'Location not specified'}</p>
                 </div>
             </div>
 
             {/* Job Title */}
-            <h1 className="font-bold text-lg my-2">{job.job_title}</h1>
+            <h1 className="font-bold text-lg my-2">{job.job_title || 'Untitled Position'}</h1>
 
             {/* Job Description */}
-            {job.description && (
+            {description && (
                 <div className="mt-2 text-sm text-gray-600">
-                    {isExpanded ? job.description : descriptionPreview}
+                    {isExpanded ? description : descriptionPreview}
                 </div>
             )}
 
             {/* Read More Button */}
             {shouldTruncate && (
                 <button
-                    onClick={() => setIsExpanded(!isExpanded)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsExpanded(!isExpanded);
+                    }}
                     className="mt-2 text-blue-600 text-sm hover:underline focus:outline-none transition-colors"
                     aria-expanded={isExpanded}
                     aria-label={`${isExpanded ? 'Collapse' : 'Expand'} job description`}
@@ -108,7 +135,10 @@ const Job = ({ job }) => {
             {/* Action Buttons */}
             <div className="flex items-center gap-4 mt-4">
                 <Button
-                    onClick={handleViewDetails}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewDetails();
+                    }}
                     variant="outline"
                     className="hover:bg-gray-50 transition-colors"
                 >
@@ -116,7 +146,10 @@ const Job = ({ job }) => {
                 </Button>
                 <Button
                     className="bg-[#7209b7] hover:bg-[#5e0d9b] transition-colors"
-                    onClick={handleSaveJob}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveJob(e);
+                    }}
                 >
                     {isSaved ? 'Saved' : 'Save For Later'}
                 </Button>
@@ -127,13 +160,13 @@ const Job = ({ job }) => {
 
 Job.propTypes = {
     job: PropTypes.shape({
-        id: PropTypes.string.isRequired,
-        created_at: PropTypes.string.isRequired,
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        created_at: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
         company_name: PropTypes.string,
         city: PropTypes.string,
-        job_title: PropTypes.string.isRequired,
+        job_title: PropTypes.string,
         description: PropTypes.string,
-        company_id: PropTypes.string,
+        company_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         company: PropTypes.shape({
             logo: PropTypes.string
         })

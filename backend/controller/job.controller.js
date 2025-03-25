@@ -119,7 +119,7 @@ export const getAllJobs = async (req, res) => {
 export const getJobById = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT j.*, c.name as company_name, c.logo as company_logo
+      `SELECT j.*, c.name as company_name, c.logo as company_logo 
        FROM job j
        LEFT JOIN companies c ON j.company_id = c.id
        WHERE j.id = $1`,
@@ -135,7 +135,7 @@ export const getJobById = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: result.rows[0]
+      job: result.rows[0]
     });
 
   } catch (error) {
@@ -146,7 +146,6 @@ export const getJobById = async (req, res) => {
     });
   }
 };
-
 export const getAdminJobs = async (req, res) => {
   try {
     const result = await pool.query(`

@@ -7,7 +7,7 @@ const jobSlice = createSlice({
     allAdminJobs: [],
     singleJob: null,
     searchJobByText: "",
-    allAppliedJobs: [],
+    allAppliedJobs: [],  // This already exists in your initialState
     searchedQuery: "",
     error: null,
     loading: false,
@@ -35,6 +35,7 @@ const jobSlice = createSlice({
     setSearchJobByText: (state, action) => {
       state.searchJobByText = action.payload;
     },
+    // This is the reducer you asked to add - keeping the same simple implementation
     setAllAppliedJobs: (state, action) => {
       state.allAppliedJobs = action.payload;
     },
@@ -47,7 +48,7 @@ const jobSlice = createSlice({
     setLoading: (state, action) => {
       state.loading = action.payload;
     },
-   setPagination: (state, action) => {
+    setPagination: (state, action) => {
       state.pagination = {
         ...state.pagination,
         ...action.payload
@@ -71,6 +72,7 @@ const jobSlice = createSlice({
   },
 });
 
+// No changes to the exports
 export const {
   setAllJobs,
   setSingleJob,

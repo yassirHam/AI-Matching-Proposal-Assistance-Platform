@@ -3,23 +3,22 @@ import pool from "../utils/db.js";
 
 const isAuthenticated = async (req, res, next) => {
     try {
-        // Get token from Authorization header
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        // Check both Authorization header and cookies
+        const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
+
+        if (!token) {
             return res.status(401).json({
                 message: "Authentication required",
                 success: false
             });
         }
 
-        const token = authHeader.split(' ')[1]; // Extract token
-
         // Verify the token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Check if the user exists in the database
+        // Check if user exists
         const userResult = await pool.query(
-            'SELECT id, email, role FROM users WHERE id = $1',
+            'SELECT id, email FROM users WHERE id = $1',
             [decoded.userId]
         );
 
@@ -30,7 +29,7 @@ const isAuthenticated = async (req, res, next) => {
             });
         }
 
-        // Attach user information to the request object
+        // Attach user to request
         req.user = userResult.rows[0];
         next();
     } catch (error) {

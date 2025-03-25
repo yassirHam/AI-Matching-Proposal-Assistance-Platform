@@ -1,10 +1,21 @@
 import pool from "../utils/db.js";
-import { v4 as uuidv4 } from 'uuid';
-
 export const applyJob = async (req, res) => {
     try {
-        const userId = req.id;
+        const userId = req.user.id; // Changed from req.id to req.user.id
         const jobId = req.params.id;
+
+        // Verify job exists
+        const jobCheck = await pool.query(
+            'SELECT id FROM job WHERE id = $1',
+            [jobId]
+        );
+
+        if (jobCheck.rows.length === 0) {
+            return res.status(404).json({
+                message: "Job not found",
+                success: false
+            });
+        }
 
         const existingApp = await pool.query(
             'SELECT * FROM applications WHERE job_id = $1 AND applicant_id = $2',
@@ -36,10 +47,10 @@ export const applyJob = async (req, res) => {
         res.status(500).json({ message: "Server error", success: false });
     }
 };
-
 export const getAppliedJobs = async (req, res) => {
     try {
-        const userId = req.id;
+        const userId = req.user.id;  // Using req.user.id from authentication middleware
+
         const result = await pool.query(`
             SELECT a.*, j.job_title, j.city, j.job_link, j.source, 
                    c.name AS company_name, c.logo AS company_logo
@@ -51,13 +62,16 @@ export const getAppliedJobs = async (req, res) => {
         `, [userId]);
 
         res.status(200).json({
-            applications: result.rows,
-            success: true
+            success: true,
+            applications: result.rows  // Ensure this matches what frontend expects
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Server error", success: false });
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch applications"
+        });
     }
 };
 
